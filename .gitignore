@@ -1,0 +1,5 @@
+.envrc
+kdp_kube_config
+gke_gcloud_auth_plugin_cache
+app.log
+venv

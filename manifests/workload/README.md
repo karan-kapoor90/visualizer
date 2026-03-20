@@ -1,0 +1,1 @@
+k apply -f manifests/workload/mesh/canary/ --context delhi && k apply -f manifests/workload/mesh/canary/ --context mumbai

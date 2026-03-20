@@ -1,0 +1,34 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: whereami-vs
+  namespace: ha
+spec:
+  gateways:
+  - istio-ingress/istio-ingress-gateway
+  hosts:
+  - '*'
+  http:
+  - match:
+    - headers:
+        x-feature-flag:
+          exact: "pvt"
+    route:
+    - destination:
+        host: whereami.ha.svc.cluster.local # DR-MUMBAI
+        port:
+          number: 80
+        subset: pvt
+  - route:
+    - destination:
+        host: whereami.ha.svc.cluster.local # DR-MUMBAI
+        port:
+          number: 80
+        subset: v1
+      weight: 50
+    - destination:
+        host: whereami.ha.svc.cluster.local # DR-MUMBAI
+        port:
+          number: 80
+        subset: v2
+      weight: 50

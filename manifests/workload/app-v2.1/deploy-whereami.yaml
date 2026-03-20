@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whereami-v2.1
+  namespace: ha
+  labels:
+    app: whereami
+    version: v2.1
+spec:
+  replicas: 1 #whereami can be deployed as multiple identical replicas
+  selector:
+    matchLabels:
+      app: whereami
+  template:
+    metadata:
+      labels:
+        app: whereami
+        version: v2.1
+        service.istio.io/canonical-name: whereami
+    spec:
+      containers:
+      - name: whereami
+        image: us-docker.pkg.dev/google-samples/containers/gke/whereami:v1.2.20
+        ports:
+          - name: http
+            containerPort: 8080 #The application is listening on port 8080
+        livenessProbe: #There is a health probe listening on port 8080/healthz that will respond with 200 if the application is running
+          httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 15
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+        env:
+          - name: NODE_NAME #The node name the pod is running on
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: POD_NAMESPACE #The kubernetes Namespace where the Pod is running
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: POD_IP #The IP address of the pod
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: POD_SERVICE_ACCOUNT #The name of the Service Account that the pod is using
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.serviceAccountName
+          - name: BACKEND_ENABLED #If true, enables queries from whereami to a specified Service name or IP. Requires BACKEND_SERVICE to be set.
+            valueFrom:
+              configMapKeyRef:
+                name: whereami-v2.1
+                key: BACKEND_ENABLED
+          - name: BACKEND_SERVICE #Configures the name or IP of the endpoint that whereami will query.
+            valueFrom:
+              configMapKeyRef:
+                name: whereami-v2.1
+                key: BACKEND_SERVICE
+          - name: METADATA #An arbitrary metadata field that can be used to label JSON responses
+            valueFrom:
+              configMapKeyRef:
+                name: whereami-v2.1
+                key: METADATA

@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cloud Service Mesh | Traffic Steering Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @font-face {
+      font-family: 'Google Sans';
+      src: url('https://fonts.gstatic.com/s/googlesans/v36/4UaGrENHsxJlGDuGo1OIlL3Kwp5eK2G4.woff2') format('woff2');
+    }
+
+    body {
+      font-family: 'Google Sans', Arial, sans-serif;
+      background-color: #f8f9fa;
+    }
+
+    .terminal-output::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .terminal-output::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+
+    .terminal-output::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }
+
+    .traffic-dot {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #4285F4;
+      pointer-events: none;
+      z-index: 50;
+      transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s;
+    }
+
+    .pulse-green {
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      animation: pulse-green 2s infinite;
+    }
+
+    @keyframes pulse-green {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      }
+
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+      }
+
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+      }
+    }
+
+    .node-card {
+      transition: all 0.3s ease;
+    }
+
+    .node-card.failed {
+      filter: grayscale(1);
+      border-color: #ef4444 !important;
+    }
+
+    #map-overlay {
+      background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/India_location_map.svg/800px-India_location_map.svg.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center right;
+      opacity: 0.10;
+    }
+  </style>
+</head>
+
+<body class="p-0 m-0">
+
+  <!-- Navigation Header -->
+  <nav class="bg-white border-b px-6 py-3 flex justify-between items-center sticky top-0 z-50">
+    <div class="flex items-center space-x-3">
+      <span class="material-symbols-outlined text-blue-600 text-3xl">hub</span>
+      <h1 class="text-xl font-medium text-gray-800 tracking-tight">Cloud Service Mesh (CSM) Visualizer</h1>
+    </div>
+    <div class="flex items-center space-x-6">
+      <div class="flex items-center space-x-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        <span class="text-xs font-semibold text-gray-500 uppercase">VPC: global-vpc</span>
+      </div>
+      <div class="flex items-center space-x-2">
+        <span class="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
+        <span class="text-xs font-semibold text-gray-500 uppercase">Mesh: gke-mesh</span>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-[1400px] mx-auto p-6 grid grid-cols-12 gap-6">
+
+    <!-- Sidebar: Controls -->
+    <div class="col-span-12 lg:col-span-4 space-y-6">
+
+      <!-- Traffic Generator Section -->
+      <section class="bg-white rounded-xl shadow-sm border p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Traffic Generator</h2>
+          <span class="material-symbols-outlined text-gray-400">speed</span>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between mb-2">
+              <label class="text-sm font-medium text-gray-700">Request Rate (RPS)</label>
+              <span id="rps-label" class="text-sm font-bold text-blue-600">5 rps</span>
+            </div>
+            <input type="range" id="rps-slider" min="1" max="25" value="5"
+              class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+          </div>
+
+          <div>
+            <div class="flex justify-between mb-2">
+              <label class="text-sm font-medium text-gray-700">Duration (Seconds)</label>
+              <span id="duration-label" class="text-sm font-bold text-blue-600">60s</span>
+            </div>
+            <input type="range" id="duration-slider" min="10" max="300" step="10" value="60"
+              class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+          </div>
+
+          <div>
+            <label for="service-name" class="text-sm font-medium text-gray-700 mb-2 block">Target Service Name</label>
+            <input type="text" id="service-name" placeholder="e.g.: my-service.namespace"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring-blue-500 focus:border-blue-500 text-sm">
+          </div>
+
+          <div>
+            <label for="feature-flag" class="text-sm font-medium text-gray-700 mb-2 block">Header: x-feature-flag</label>
+            <input type="text" id="feature-flag" placeholder="e.g.: pvt"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring-blue-500 focus:border-blue-500 text-sm">
+          </div>
+
+          <div class="flex space-x-3">
+            <button id="start-btn"
+              class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold flex items-center justify-center transition">
+              <span class="material-symbols-outlined mr-2">play_arrow</span> Start
+            </button>
+            <button id="stop-btn"
+              class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 py-3 rounded-lg font-bold flex items-center justify-center transition disabled:opacity-50"
+              disabled>
+              <span class="material-symbols-outlined mr-2">stop</span> Stop
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Istio Controls Section -->
+      <section class="bg-white rounded-xl shadow-sm border p-6">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Istio Steering Policy</h2>
+          <span class="material-symbols-outlined text-gray-400">tune</span>
+        </div>
+        <p class="text-[11px] text-gray-500 mb-4 italic">Note: Changes will apply only when you click the Apply Mesh Policy button.</p>
+
+        <div class="space-y-5">
+          <!-- Mode Toggle -->
+          <div class="flex justify-between items-center bg-gray-50 p-1 rounded-xl border">
+            <button id="toggle-100" onclick="switchMode('100')" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-slate-800 transition">100% Steering</button>
+            <button id="toggle-custom" onclick="switchMode('custom')" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:text-slate-800 transition">Custom Split</button>
+            <button id="toggle-simplerr" onclick="switchMode('simplerr')" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:text-slate-800 transition">Simple RR</button>
+          </div>
+
+          <!-- 100% Steering Sub-section -->
+          <div id="section-100" class="space-y-3">
+            <label class="text-xs font-semibold text-gray-600 block mb-1">Target Region (100% Traffic)</label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="flex flex-col items-center justify-center p-3 border-2 border-blue-500 rounded-xl bg-blue-50 cursor-pointer transition-all" id="card-100-delhi" onclick="select100('asia-south2')">
+                <input type="radio" name="region-100" value="asia-south2" checked class="hidden">
+                <span class="text-xs font-bold text-slate-800">asia-south2</span>
+                <span class="text-[10px] text-gray-400">Delhi</span>
+              </label>
+              <label class="flex flex-col items-center justify-center p-3 border border-gray-200 rounded-xl cursor-pointer transition-all" id="card-100-mumbai" onclick="select100('asia-south1')">
+                <input type="radio" name="region-100" value="asia-south1" class="hidden">
+                <span class="text-xs font-bold text-slate-800">asia-south1</span>
+                <span class="text-[10px] text-gray-400">Mumbai</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Custom Steering Sub-section -->
+          <div id="section-custom" class="hidden space-y-3">
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-xs font-semibold text-gray-600">Weight-Based Traffic Split</label>
+              <span id="weight-label" class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono">asia-south2:50% / asia-south1:50%</span>
+            </div>
+            <input type="range" id="weight-slider" min="0" max="100" value="50" class="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+            <div class="flex justify-between text-[10px] text-gray-400 font-bold uppercase mt-1">
+              <span>asia-south2</span>
+              <span>asia-south1</span>
+            </div>
+          </div>
+
+          <button id="apply-btn" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-lg font-bold flex items-center justify-center transition mt-2">
+            <span class="material-symbols-outlined mr-2">cloud_sync</span> Apply Mesh Policy
+          </button>
+        </div>
+      </section>
+
+      <!-- Live Terminal Output -->
+      <section class="bg-slate-900 rounded-xl shadow-lg overflow-hidden flex flex-col h-[300px]">
+        <div class="bg-slate-800 px-4 py-2 flex items-center justify-between border-b border-slate-700">
+          <div class="flex space-x-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono">service-whereami-logs</span>
+        </div>
+        <div id="terminal"
+          class="terminal-output p-4 font-mono text-[11px] text-green-400 overflow-y-auto flex-1 leading-relaxed space-y-1">
+          <div class="text-slate-500 italic">Waiting for traffic initiation...</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Main Panel: Visualizer -->
+    <div class="col-span-12 lg:col-span-8 space-y-6 flex flex-col">
+
+      <!-- Interactive Map & Node Visualization -->
+      <section class="bg-white rounded-xl shadow-sm border p-6 relative overflow-hidden flex-1 min-h-[500px]">
+        <div id="map-overlay" class="absolute inset-0 z-0"></div>
+
+        <div class="relative z-10 flex flex-col h-full">
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h2 class="text-2xl font-bold text-gray-800">Mesh Connectivity Topology</h2>
+              <p class="text-sm text-gray-500">Real-time failover and outlier visualization</p>
+            </div>
+            <div class="flex items-center space-x-4">
+              <!-- Graphic/YAML Switch Toggle -->
+              <div class="flex items-center bg-gray-100 p-1 rounded-lg border text-xs shadow-sm">
+                <button id="view-graphic" onclick="switchView('graphic')" class="px-3 py-1.5 font-bold rounded-md bg-white shadow-sm text-slate-800 transition-all">Graphic</button>
+                <button id="view-yaml" onclick="switchView('yaml')" class="px-3 py-1.5 font-bold rounded-md text-gray-500 hover:text-slate-800 transition-all">YAML</button>
+              </div>
+              
+              <div class="flex items-center space-x-3 bg-white p-2 border rounded-lg shadow-sm">
+                <div class="flex items-center space-x-1">
+                  <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span class="text-[10px] font-bold text-gray-600">Healthy</span>
+                </div>
+                <div class="flex items-center space-x-1">
+                  <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span class="text-[10px] font-bold text-gray-600">Outage</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Central Client Entry Point -->
+          <div class="flex-1 relative w-full h-full" id="visualization-area">
+
+            <!-- Graphic View Area -->
+            <div id="graphic-view" class="absolute inset-0 flex items-center justify-center relative w-full h-full">
+              <!-- Origin: External LB -->
+              <div id="origin" class="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                <div class="p-4 bg-white border-2 border-blue-500 rounded-full shadow-lg z-20">
+                  <span class="material-symbols-outlined text-blue-600 text-3xl">public</span>
+                </div>
+                <span class="mt-2 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Global LB</span>
+              </div>
+
+              <!-- Cluster: Delhi -->
+              <div id="node-delhi"
+                class="node-card absolute top-10 right-10 w-52 bg-white border-2 border-gray-100 p-4 rounded-xl shadow-md z-20 hover:scale-105 transition-transform">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center space-x-2">
+                    <span class="material-symbols-outlined text-blue-600">dns</span>
+                    <span class="text-sm font-bold text-gray-800">Delhi Cluster</span>
+                  </div>
+                  <span id="status-delhi" class="w-3 h-3 rounded-full bg-green-500 pulse-green"></span>
+                </div>
+                <div class="space-y-2">
+                  <div class="flex justify-between text-[10px] text-gray-400">
+                    <span>Region</span>
+                    <span class="font-mono text-gray-700">asia-south2</span>
+                  </div>
+                  <button onclick="toggleCluster('delhi')"
+                    class="w-full mt-2 py-1.5 bg-red-50 text-red-600 text-[10px] font-bold rounded border border-red-100 hover:bg-red-100 transition">INJECT
+                    FAILURE</button>
+                </div>
+              </div>
+
+              <!-- Cluster: Mumbai -->
+              <div id="node-mumbai"
+                class="node-card absolute bottom-10 right-10 w-52 bg-white border-2 border-gray-100 p-4 rounded-xl shadow-md z-20 hover:scale-105 transition-transform">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center space-x-2">
+                    <span class="material-symbols-outlined text-purple-600">dns</span>
+                    <span class="text-sm font-bold text-gray-800">Mumbai Cluster</span>
+                  </div>
+                  <span id="status-mumbai" class="w-3 h-3 rounded-full bg-green-500 pulse-green"></span>
+                </div>
+                <div class="space-y-2">
+                  <div class="flex justify-between text-[10px] text-gray-400">
+                    <span>Region</span>
+                    <span class="font-mono text-gray-700">asia-south1</span>
+                  </div>
+                  <button onclick="toggleCluster('mumbai')"
+                    class="w-full mt-2 py-1.5 bg-red-50 text-red-600 text-[10px] font-bold rounded border border-red-100 hover:bg-red-100 transition">INJECT
+                    FAILURE</button>
+                </div>
+              </div>
+
+              <!-- Connection Paths (SVG) -->
+              <svg class="absolute inset-0 w-full h-full pointer-events-none z-10" id="svg-layer">
+                <path id="path-delhi" d="" stroke="#cbd5e1" stroke-width="2" fill="none" stroke-dasharray="8,4" />
+                <path id="path-mumbai" d="" stroke="#cbd5e1" stroke-width="2" fill="none" stroke-dasharray="8,4" />
+              </svg>
+            </div>
+
+            <!-- YAML View Area -->
+            <div id="yaml-view" class="absolute inset-0 flex flex-col hidden p-2 bg-slate-950 rounded-xl overflow-hidden">
+                <!-- Context Selector Bar -->
+                <div class="flex justify-between items-center mb-2 px-2 pb-2 border-b border-slate-800">
+                    <div class="flex items-center space-x-2">
+                         <span class="material-symbols-outlined text-slate-400 text-sm">hub</span>
+                         <span class="text-xs font-bold text-slate-300">Source Context</span>
+                    </div>
+                    <select id="context-selector" onchange="onContextChange()" class="bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 text-xs rounded-md px-3 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer">
+                        <option value="current">Detecting context...</option>
+                    </select>
+                </div>
+
+                <!-- Panels Row -->
+                <div class="flex-1 flex space-x-4 overflow-hidden">
+                    <!-- Left: DestinationRule -->
+                    <div class="flex-1 bg-slate-900 rounded-lg p-4 border border-slate-800 flex flex-col overflow-hidden">
+                        <div class="text-xs font-bold text-slate-400 mb-2 pb-2 border-b border-slate-800 flex justify-between items-center">
+                            <span>DestinationRule: whereami (<span id="dr-context-tag" class="text-blue-400">current</span>)</span>
+                            <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                        </div>
+                        <pre id="dr-yaml" class="text-[10px] text-green-400 font-mono overflow-y-auto flex-1 leading-relaxed whitespace-pre-wrap"></pre>
+                    </div>
+                    <!-- Right: VirtualService -->
+                    <div class="flex-1 bg-slate-900 rounded-lg p-4 border border-slate-800 flex flex-col overflow-hidden">
+                        <div class="text-xs font-bold text-slate-400 mb-2 pb-2 border-b border-slate-800 flex justify-between items-center">
+                            <span>VirtualService: whereami-vs (<span id="vs-context-tag" class="text-purple-400">current</span>)</span>
+                            <span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
+                        </div>
+                        <pre id="vs-yaml" class="text-[10px] text-green-400 font-mono overflow-y-auto flex-1 leading-relaxed whitespace-pre-wrap"></pre>
+                    </div>
+                </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- Statistics Dashboard -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section class="bg-white rounded-xl shadow-sm border p-6">
+          <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Requests Distribution</h3>
+          <div class="h-40 relative">
+            <canvas id="traffic-chart"></canvas>
+          </div>
+        </section>
+
+        <section class="bg-white rounded-xl shadow-sm border p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Global Health Status</h3>
+            <span id="mesh-status-badge"
+              class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">OPERATIONAL</span>
+          </div>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+              <div class="flex items-center space-x-3">
+                <span class="material-symbols-outlined text-blue-500 text-lg">public</span>
+                <span class="text-xs font-bold text-gray-700">Delhi (Local)</span>
+              </div>
+              <span id="health-text-delhi" class="text-xs text-green-600 font-bold">HEALTHY</span>
+            </div>
+            <div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
+              <div class="flex items-center space-x-3">
+                <span class="material-symbols-outlined text-purple-500 text-lg">public</span>
+                <span class="text-xs font-bold text-gray-700">Mumbai (Remote)</span>
+              </div>
+              <span id="health-text-mumbai" class="text-xs text-green-600 font-bold">HEALTHY</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // Configuration & State
+    const clusters = {
+      delhi: {
+        name: 'Delhi-GKE',
+        region: 'asia-south2',
+        healthy: true,
+        requests: 0,
+        element: 'node-delhi',
+        statusEl: 'status-delhi',
+        pathEl: 'path-delhi'
+      },
+      mumbai: {
+        name: 'Mumbai-GKE',
+        region: 'asia-south1',
+        healthy: true,
+        requests: 0,
+        element: 'node-mumbai',
+        statusEl: 'status-mumbai',
+        pathEl: 'path-mumbai'
+      }
+    };
+
+    let rps = 5;
+    let duration = 60;
+    let isTrafficRunning = false;
+    let trafficInterval = null;
+    let trafficChart = null;
+    let appliedConfig = {
+      weight_mumbai: 50,
+      failover_enabled: true,
+      outlier_detection_enabled: true
+    };
+
+    // Initialize UI
+    document.addEventListener('DOMContentLoaded', () => {
+      initChart();
+      // Small delay to ensure DOM is fully rendered for accurate bounding boxes
+      setTimeout(updatePaths, 100);
+      window.addEventListener('resize', updatePaths);
+
+      // Fetch initial traffic split settings from ISTIO Destination Rules API
+      fetch('/api/destination-rules/distribute')
+        .then(response => response.json())
+        .then(data => {
+          if (data && data.distribute && data.distribute.length > 0) {
+            let weight_mumbai = null;
+            data.distribute.forEach(d => {
+              if (d.to && d.to['asia-south1'] !== undefined) {
+                weight_mumbai = d.to['asia-south1'];
+              }
+            });
+            if (weight_mumbai !== null) {
+              const slider = document.getElementById('weight-slider');
+              const label = document.getElementById('weight-label');
+              if (slider && label) {
+                slider.value = weight_mumbai;
+                label.textContent = `asia-south2:${100 - weight_mumbai}% / asia-south1:${weight_mumbai}%`;
+                if (typeof appliedConfig !== 'undefined') {
+                  appliedConfig.weight_mumbai = weight_mumbai;
+                }
+              }
+            }
+          }
+        })
+        .catch(err => console.error("Error fetching distribution settings:", err));
+
+      // WebSocket Connection for streaming backend responses
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      const ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        logTerminal(event.data, 'green');
+      };
+
+      ws.onerror = (error) => {
+        console.error("WebSocket Error:", error);
+      };
+
+      // Event Listeners for Sliders
+      document.getElementById('rps-slider').addEventListener('input', (e) => {
+        rps = parseInt(e.target.value);
+        document.getElementById('rps-label').textContent = `${rps} rps`;
+      });
+
+      document.getElementById('duration-slider').addEventListener('input', (e) => {
+        duration = parseInt(e.target.value);
+        document.getElementById('duration-label').textContent = `${duration}s`;
+      });
+    });
+
+    // Chart Initialization
+    function initChart() {
+      const ctx = document.getElementById('traffic-chart').getContext('2d');
+      trafficChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Delhi (Local)', 'Mumbai'],
+          datasets: [{
+            data: [0, 0], // Start empty, will update on traffic
+            backgroundColor: ['#4285F4', '#9333ea'],
+            borderWidth: 0,
+            hoverOffset: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { boxWidth: 12, font: { size: 11 } } }
+          },
+          cutout: '70%'
+        }
+      });
+    }
+
+    // Path Logic (SVG)
+    function updatePaths() {
+      const originNode = document.getElementById('origin');
+      const container = document.getElementById('visualization-area');
+
+      if (!originNode || !container) return;
+
+      const originRect = originNode.getBoundingClientRect();
+      const parentRect = container.getBoundingClientRect();
+
+      const startX = originRect.right - parentRect.left;
+      const startY = originRect.top + (originRect.height / 2) - parentRect.top;
+
+      ['delhi', 'mumbai'].forEach(key => {
+        const nodeRect = document.getElementById(clusters[key].element).getBoundingClientRect();
+        const endX = nodeRect.left - parentRect.left;
+        const endY = nodeRect.top + (nodeRect.height / 2) - parentRect.top;
+
+        // Bezier curve for smooth paths
+        const cp1X = startX + (endX - startX) * 0.4;
+        const cp1Y = startY;
+        const cp2X = startX + (endX - startX) * 0.6;
+        const cp2Y = endY;
+
+        const path = `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`;
+        document.getElementById(clusters[key].pathEl).setAttribute('d', path);
+      });
+    }
+
+    let yamlSocket = null;
+
+    function switchView(view) {
+      const btnGraphic = document.getElementById('view-graphic');
+      const btnYaml = document.getElementById('view-yaml');
+      const secGraphic = document.getElementById('graphic-view');
+      const secYaml = document.getElementById('yaml-view');
+
+      const activeClass = "px-3 py-1.5 font-bold rounded-md bg-white shadow-sm text-slate-800 transition-all";
+      const inactiveClass = "px-3 py-1.5 font-bold rounded-md text-gray-500 hover:text-slate-800 transition-all";
+
+      if (view === 'graphic') {
+        btnGraphic.className = activeClass;
+        btnYaml.className = inactiveClass;
+        if(secGraphic) secGraphic.classList.remove('hidden');
+        if(secYaml) secYaml.classList.add('hidden');
+        cleanupYamlSocket();
+      } else {
+        btnYaml.className = activeClass;
+        btnGraphic.className = inactiveClass;
+        if(secYaml) secYaml.classList.remove('hidden');
+        if(secGraphic) secGraphic.classList.add('hidden');
+        initYamlSocket();
+      }
+    }
+
+    function highlightSpec(yamlText) {
+      if (!yamlText) return "";
+      const lines = yamlText.split('\n');
+      const specIndex = lines.findIndex(l => l.startsWith('spec:'));
+      if (specIndex !== -1) {
+         const preSpec = lines.slice(0, specIndex).join('\n');
+         const specPart = lines.slice(specIndex).join('\n');
+         return `${preSpec}\n<span class="text-amber-300 font-bold">${specPart}</span>`;
+      }
+      return yamlText;
+    }
+
+    function initYamlSocket() {
+      if (yamlSocket) return; 
+      
+      const dropdown = document.getElementById('context-selector');
+      const selectedContext = dropdown ? dropdown.value : 'current';
+      
+      if(document.getElementById('dr-context-tag')) document.getElementById('dr-context-tag').innerText = selectedContext === 'current' || selectedContext === '' ? 'active' : selectedContext;
+      if(document.getElementById('vs-context-tag')) document.getElementById('vs-context-tag').innerText = selectedContext === 'current' || selectedContext === '' ? 'active' : selectedContext;
+
+      console.log("Initiating YAML websocket stream for context: " + selectedContext);
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const url = `${protocol}//${window.location.host}/ws/yaml?context=${selectedContext}`;
+      
+      yamlSocket = new WebSocket(url);
+      
+      yamlSocket.onmessage = function(event) {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.error) {
+             if(document.getElementById('dr-yaml')) document.getElementById('dr-yaml').innerText = `Error: ${data.error}`;
+             if(document.getElementById('vs-yaml')) document.getElementById('vs-yaml').innerText = `Error: ${data.error}`;
+             return;
+          }
+          if (data.dr && document.getElementById('dr-yaml')) {
+              document.getElementById('dr-yaml').innerHTML = highlightSpec(data.dr);
+          }
+          if (data.vs && document.getElementById('vs-yaml')) {
+              document.getElementById('vs-yaml').innerHTML = highlightSpec(data.vs);
+          }
+        } catch (e) {
+           console.error("Failed decoding socket package", e);
+        }
+      };
+
+      yamlSocket.onclose = function() {
+        console.log("YAML websocket disconnected.");
+        yamlSocket = null;
+      };
+    }
+
+    function cleanupYamlSocket() {
+      if (yamlSocket) {
+        yamlSocket.close();
+        yamlSocket = null;
+      }
+    }
+
+    async function fetchContexts() {
+      try {
+        const res = await fetch('/api/contexts');
+        const data = await res.json();
+        const dropdown = document.getElementById('context-selector');
+        if (dropdown) {
+          dropdown.innerHTML = '';
+          // Add 'current' explicitly
+          const defaultOpt = document.createElement('option');
+          defaultOpt.value = 'current';
+          defaultOpt.innerText = data.active ? `Current (${data.active})` : 'Current context';
+          dropdown.appendChild(defaultOpt);
+
+          if (data.contexts) {
+            data.contexts.forEach(ctx => {
+               if (ctx !== data.active) {
+                   const opt = document.createElement('option');
+                   opt.value = ctx;
+                   opt.innerText = ctx;
+                   dropdown.appendChild(opt);
+               }
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch contexts:", e);
+      }
+    }
+
+    function onContextChange() {
+      console.log("Context changed, reconnecting websocket stream...");
+      cleanupYamlSocket();
+      // Give it a small tick to ensure socket close event propagates cleanly
+      setTimeout(() => {
+         initYamlSocket();
+      }, 200);
+    }
+
+    // Fetch contexts on page load
+    document.addEventListener("DOMContentLoaded", () => {
+       fetchContexts();
+    });
+
+    // UI Mode toggling
+    function switchMode(mode) {
+      const btn100 = document.getElementById('toggle-100');
+      const btnCustom = document.getElementById('toggle-custom');
+      const btnSimple = document.getElementById('toggle-simplerr');
+      const sec100 = document.getElementById('section-100');
+      const secCustom = document.getElementById('section-custom');
+
+      const activeClass = "flex-1 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-slate-800 transition";
+      const inactiveClass = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:text-slate-800 transition";
+
+      if (btn100 && btnCustom && btnSimple) {
+        btn100.className = inactiveClass;
+        btnCustom.className = inactiveClass;
+        btnSimple.className = inactiveClass;
+      }
+      
+      if (sec100 && secCustom) {
+        sec100.classList.add('hidden');
+        secCustom.classList.add('hidden');
+      }
+
+      if (mode === '100') {
+        if (btn100) btn100.className = activeClass;
+        if (sec100) sec100.classList.remove('hidden');
+      } else if (mode === 'custom') {
+        if (btnCustom) btnCustom.className = activeClass;
+        if (secCustom) secCustom.classList.remove('hidden');
+      } else if (mode === 'simplerr') {
+        if (btnSimple) btnSimple.className = activeClass;
+      }
+    }
+
+    function select100(region) {
+      const radio = document.querySelector(`input[name="region-100"][value="${region}"]`);
+      if (radio) radio.checked = true;
+      
+      const cardDelhi = document.getElementById('card-100-delhi');
+      const cardMumbai = document.getElementById('card-100-mumbai');
+      if (region === 'asia-south2') {
+        cardDelhi.className = "flex flex-col items-center justify-center p-3 border-2 border-blue-500 rounded-xl bg-blue-50 cursor-pointer transition-all";
+        cardMumbai.className = "flex flex-col items-center justify-center p-3 border border-gray-200 rounded-xl cursor-pointer transition-all";
+      } else {
+        cardMumbai.className = "flex flex-col items-center justify-center p-3 border-2 border-blue-500 rounded-xl bg-blue-50 cursor-pointer transition-all";
+        cardDelhi.className = "flex flex-col items-center justify-center p-3 border border-gray-200 rounded-xl cursor-pointer transition-all";
+      }
+    }
+
+    // Backend API Interaction
+    async function applyPolicy(config = null) {
+      const btn = document.getElementById('apply-btn');
+      btn.innerHTML = '<span class="material-symbols-outlined mr-2 animate-spin">sync</span> Applying...';
+      btn.disabled = true;
+
+      const btnSimple = document.getElementById('toggle-simplerr');
+      const btn100 = document.getElementById('toggle-100');
+      
+      const isSimple = btnSimple ? btnSimple.classList.contains('bg-white') : false;
+      const is100 = btn100 ? btn100.classList.contains('bg-white') : true; // fallback
+      
+      let payload = { mode: 'custom', distribute: {} };
+
+      if (isSimple) {
+        payload.mode = 'simple_rr';
+      } else if (is100) {
+        payload.mode = '100';
+        const checkedRadio = document.querySelector('input[name="region-100"]:checked');
+        if (checkedRadio) {
+            payload.distribute[checkedRadio.value + "/*"] = 100;
+        }
+      } else {
+        payload.mode = 'custom';
+        const val = parseInt(document.getElementById('weight-slider').value);
+        payload.distribute['asia-south1/*'] = val;
+        payload.distribute['asia-south2/*'] = 100 - val;
+      }
+
+      console.log("Applying Policy Data:", payload);
+
+      try {
+        const res = await fetch('/api/destination-rules/distribute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+
+        await res.json();
+        logTerminal(`[API SUCCESS] Istio steering policy applied to DestinationRule.`, 'blue');
+        
+        // Update local appliedConfig for simulation
+        if (payload.mode === 'custom') {
+             appliedConfig.weight_mumbai = parseInt(document.getElementById('weight-slider').value);
+        } else if (payload.mode === '100') {
+             appliedConfig.weight_mumbai = payload.distribute['asia-south1/*'] || 0;
+        } else {
+             appliedConfig.weight_mumbai = 50; // default for simple_rr in simulation visually
+        }
+
+      } catch (e) {
+        logTerminal(`[API ERROR] Failed to apply policy: ${e.message}`, 'red');
+      }
+
+      btn.innerHTML = '<span class="material-symbols-outlined mr-2">cloud_sync</span> Apply Mesh Policy';
+      btn.disabled = false;
+    }
+
+    async function startTraffic() {
+      if (isTrafficRunning) return;
+      isTrafficRunning = true;
+      document.getElementById('start-btn').disabled = true;
+      document.getElementById('start-btn').classList.add('opacity-50');
+      document.getElementById('stop-btn').disabled = false;
+      document.getElementById('stop-btn').classList.remove('opacity-50');
+
+      const serviceName = document.getElementById('service-name').value;
+      const featureFlag = document.getElementById('feature-flag') ? document.getElementById('feature-flag').value : "";
+
+      if (!serviceName) {
+        logTerminal('Please enter a target service name.', 'red');
+        stopTraffic();
+        return;
+      }
+
+      logTerminal(`Starting traffic generator for service: ${serviceName} at ${rps} RPS for ${duration}s...`, 'cyan');
+
+      try {
+        let payload = { service_name: serviceName, rps: rps, duration: duration };
+        if (featureFlag) {
+            payload.feature_flag = featureFlag;
+        }
+
+        const res = await fetch('/api/generateTraffic', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        logTerminal(`[API SUCCESS] Traffic generation started for ${serviceName}.`, 'blue');
+
+        // Auto-stop in UI after duration ends
+        setTimeout(() => {
+          if (isTrafficRunning) {
+            stopTraffic();
+          }
+        }, duration * 1000);
+
+      } catch (e) {
+        logTerminal(`[API WARNING] Error: (${e.message}).`, 'red');
+        stopTraffic();
+      }
+    }
+
+    // Traffic Simulation Core
+    async function stopTraffic() {
+      isTrafficRunning = false;
+      clearInterval(trafficInterval);
+      document.getElementById('start-btn').disabled = false;
+      document.getElementById('start-btn').classList.remove('opacity-50');
+      document.getElementById('stop-btn').disabled = true;
+      document.getElementById('stop-btn').classList.add('opacity-50');
+
+      try {
+        await fetch('/api/stopTraffic', { method: 'POST' });
+      } catch (e) {
+        console.error("Failed to stop backend traffic:", e);
+      }
+      logTerminal('Traffic generator stopped.', 'slate');
+    }
+
+    function processRequest() {
+      let target = null;
+      const rand = Math.random() * 100;
+
+      // Decision Engine based on APPLIED config (simulating Istio Data Plane behavior)
+      if (appliedConfig.failover_enabled) {
+        // Assume Delhi is primary (Local)
+        if (clusters.delhi.healthy) {
+          target = (rand < (100 - appliedConfig.weight_mumbai)) ? 'delhi' : 'mumbai';
+
+          if (target === 'mumbai' && !clusters.mumbai.healthy) {
+            target = 'delhi';
+            logTerminal(`[Failover Activated] Mumbai down. Rerouted to Delhi.`, 'yellow');
+          }
+        } else {
+          // Local (Delhi) is down
+          if (clusters.mumbai.healthy) {
+            target = 'mumbai';
+          } else {
+            // Both down
+            logTerminal(`[ERROR] 503 Service Unavailable. No healthy upstreams.`, 'red');
+            animatePacket('error');
+            return;
+          }
+        }
+      } else {
+        // Pure Weighted Routing (No failover logic)
+        target = (rand < (100 - appliedConfig.weight_mumbai)) ? 'delhi' : 'mumbai';
+
+        if (!clusters[target].healthy) {
+          if (appliedConfig.outlier_detection_enabled) {
+            // Mock retry logic / immediate ejection
+            const alternate = target === 'delhi' ? 'mumbai' : 'delhi';
+            if (clusters[alternate].healthy) {
+              logTerminal(`[Outlier] Endpoint ${target} ejected 5xx. Retrying ${alternate}...`, 'orange');
+              target = alternate;
+            } else {
+              logTerminal(`[ERROR] 503 Service Unavailable.`, 'red');
+              animatePacket('error');
+              return;
+            }
+          } else {
+            logTerminal(`[ERROR] 503 Request failed at ${target}.`, 'red');
+            animatePacket('error');
+            return;
+          }
+        }
+      }
+
+      // Success
+      clusters[target].requests++;
+      animatePacket(target);
+      logTerminal(`HTTP 200: Served by ${clusters[target].name} (${clusters[target].region})`, 'green');
+      updateCharts();
+    }
+
+    // Visuals: Animation
+    function animatePacket(type) {
+      const container = document.getElementById('visualization-area');
+      if (!container) return;
+
+      const dot = document.createElement('div');
+      dot.className = 'traffic-dot';
+
+      const originRect = document.getElementById('origin').getBoundingClientRect();
+      const parentRect = container.getBoundingClientRect();
+
+      const startX = originRect.right - parentRect.left;
+      const startY = originRect.top + (originRect.height / 2) - parentRect.top;
+
+      dot.style.left = startX + 'px';
+      dot.style.top = startY + 'px';
+
+      if (type === 'error') {
+        dot.style.backgroundColor = '#ef4444'; // Red
+      } else {
+        dot.style.backgroundColor = type === 'delhi' ? '#4285F4' : '#9333ea'; // Blue / Purple
+      }
+
+      container.appendChild(dot);
+
+      // Trigger reflow
+      void dot.offsetWidth;
+
+      if (type === 'error') {
+        dot.style.transform = `translate(80px, ${(Math.random() - 0.5) * 40}px)`;
+        dot.style.opacity = '0';
+      } else {
+        const nodeRect = document.getElementById(clusters[type].element).getBoundingClientRect();
+        const targetX = nodeRect.left - parentRect.left;
+        const targetY = nodeRect.top + (nodeRect.height / 2) - parentRect.top;
+
+        dot.style.transform = `translate(${targetX - startX}px, ${targetY - startY}px)`;
+      }
+
+      setTimeout(() => dot.remove(), 600);
+    }
+
+    // Visuals: Terminal
+    function logTerminal(msg, color) {
+      const term = document.getElementById('terminal');
+      const div = document.createElement('div');
+
+      let textColor = 'text-green-400';
+      if (color === 'red') textColor = 'text-red-400';
+      if (color === 'yellow') textColor = 'text-yellow-400';
+      if (color === 'blue') textColor = 'text-blue-400';
+      if (color === 'orange') textColor = 'text-orange-500';
+      if (color === 'cyan') textColor = 'text-cyan-400';
+      if (color === 'slate') textColor = 'text-slate-400';
+
+      const serviceName = document.getElementById('service-name').value || 'app.global';
+      // If it's a green message, we don't need the $ curl prefix
+      if (color === 'green') {
+        div.innerHTML = `<span class="text-slate-500">[${new Date().toLocaleTimeString()}]</span> <span class="pl-4 ${textColor}">${msg}</span>`;
+      } else {
+        div.innerHTML = `<span class="text-slate-500">[${new Date().toLocaleTimeString()}]</span> <span class="${textColor}">$ curl ${serviceName}</span><br><span class="pl-4 ${textColor}">${msg}</span>`;
+      }
+
+      term.prepend(div);
+      if (term.childNodes.length > 40) term.lastChild.remove();
+    }
+
+    // Cluster Control (Fault Injection)
+    function toggleCluster(key) {
+      clusters[key].healthy = !clusters[key].healthy;
+      const card = document.getElementById(clusters[key].element);
+      const statusIndicator = document.getElementById(clusters[key].statusEl);
+      const healthText = document.getElementById(`health-text-${key}`);
+      const meshBadge = document.getElementById('mesh-status-badge');
+
+      if (clusters[key].healthy) {
+        card.classList.remove('failed');
+        statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500 pulse-green';
+        healthText.textContent = 'HEALTHY';
+        healthText.className = 'text-xs text-green-600 font-bold';
+        logTerminal(`[System Event] Service restored in ${clusters[key].name}.`, 'green');
+      } else {
+        card.classList.add('failed');
+        statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500';
+        healthText.textContent = 'OUTAGE';
+        healthText.className = 'text-xs text-red-600 font-bold';
+        logTerminal(`[System Event] Catastrophic failure injected in ${clusters[key].name}.`, 'red');
+      }
+
+      // Update Mesh Status Badge
+      if (clusters.delhi.healthy && clusters.mumbai.healthy) {
+        meshBadge.textContent = 'OPERATIONAL';
+        meshBadge.className = 'text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold';
+      } else if (!clusters.delhi.healthy && !clusters.mumbai.healthy) {
+        meshBadge.textContent = 'CRITICAL OUTAGE';
+        meshBadge.className = 'text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded-full font-bold';
+      } else {
+        meshBadge.textContent = 'DEGRADED';
+        meshBadge.className = 'text-[10px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold';
+      }
+    }
+
+    // Data Updates
+    function updateCharts() {
+      // Only update if there's actual data to prevent drawing 0/0 charts weirdly
+      if (clusters.delhi.requests > 0 || clusters.mumbai.requests > 0) {
+        trafficChart.data.datasets[0].data = [clusters.delhi.requests, clusters.mumbai.requests];
+        trafficChart.update();
+      }
+    }
+
+    // Input Listeners
+    document.getElementById('rps-slider').addEventListener('input', (e) => {
+      rps = e.target.value;
+      document.getElementById('rps-label').textContent = `${rps} rps`;
+      if (isTrafficRunning) {
+        clearInterval(trafficInterval);
+        trafficInterval = setInterval(() => {
+          if (!isTrafficRunning) return;
+          processRequest();
+        }, 1000 / rps);
+      }
+    });
+
+    document.getElementById('weight-slider').addEventListener('input', (e) => {
+      const val = e.target.value;
+      document.getElementById('weight-label').textContent = `asia-south2:${100 - val}% / asia-south1:${val}%`;
+    });
+
+    document.getElementById('start-btn').addEventListener('click', startTraffic);
+    document.getElementById('stop-btn').addEventListener('click', stopTraffic);
+    document.getElementById('apply-btn').addEventListener('click', applyPolicy);
+
+  </script>
+</body>
+
+</html>

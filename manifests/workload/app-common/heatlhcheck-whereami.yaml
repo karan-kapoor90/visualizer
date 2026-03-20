@@ -1,0 +1,20 @@
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: whereami-hc
+  namespace: ha
+spec:
+  default:
+    checkIntervalSec: 2
+    config:
+      httpHealthCheck:
+        portSpecification: USE_SERVING_PORT
+        requestPath: /healthz
+      type: HTTP
+    healthyThreshold: 1
+    timeoutSec: 2
+    unhealthyThreshold: 1
+  targetRef:
+    group: ""
+    kind: Service
+    name: whereami

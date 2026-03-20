@@ -1,0 +1,36 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: whereami
+  namespace: ha
+spec:
+  host: whereami.ha.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      http:
+        maxRequestsPerConnection: 1
+    loadBalancer:
+      simple: ROUND_ROBIN
+      localityLbSetting:
+        enabled: true
+        distribute:
+          - from: "*"
+            to: 
+              "asia-south2/*": 100
+    outlierDetection:
+      baseEjectionTime: 1m
+      consecutive5xxErrors: 1
+      interval: 1s
+  subsets:
+  - name: v1
+    labels:
+      app: whereami
+      version: v1
+  - name: v2
+    labels:
+      app: whereami
+      version: v2
+  - name: pvt
+    labels:
+      app: whereami
+      version: v2.1

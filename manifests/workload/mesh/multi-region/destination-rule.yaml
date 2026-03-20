@@ -1,0 +1,32 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: whereami
+  namespace: ha
+spec:
+  host: whereami.ha.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      http:
+        maxRequestsPerConnection: 1
+    loadBalancer:
+      simple: ROUND_ROBIN
+      localityLbSetting:
+        enabled: true
+        distribute:
+          - from: "*"
+            to: 
+              "asia-south2/*": 100
+              # "asia-south1/*": 0
+          # - from: "asia-south1/*"
+          #   to: 
+          #     "asia-south1/*": 100
+        # failover:
+        # - from: asia-south1
+        #   to: asia-south2
+        # - from: asia-south2
+        #   to: asia-south1
+    outlierDetection:
+      baseEjectionTime: 1m
+      consecutive5xxErrors: 1
+      interval: 1s
