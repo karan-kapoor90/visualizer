@@ -5,19 +5,190 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cloud Service Mesh | Traffic Steering Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Flex:wght@100..1000&display=swap" rel="stylesheet">
   <link rel="stylesheet"
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="importmap">
+        {
+          "imports": {
+            "@material/web/": "https://esm.run/@material/web/"
+          }
+        }
+      </script>
+  <script type="module">
+    import '@material/web/all.js';
+    import { styles as typescaleStyles } from '@material/web/typography/md-typescale-styles.js';
+
+    document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
+  </script>
   <style>
-    @font-face {
-      font-family: 'Google Sans';
-      src: url('https://fonts.gstatic.com/s/googlesans/v36/4UaGrENHsxJlGDuGo1OIlL3Kwp5eK2G4.woff2') format('woff2');
+    :root {
+      /* Primary */
+      --md-sys-color-primary: #0061a4;
+      --md-sys-color-on-primary: #ffffff;
+      --md-sys-color-primary-container: #d1e4ff;
+      --md-sys-color-on-primary-container: #001d36;
+
+      /* Secondary */
+      --md-sys-color-secondary: #535f70;
+      --md-sys-color-on-secondary: #ffffff;
+      --md-sys-color-secondary-container: #d7e3f7;
+      --md-sys-color-on-secondary-container: #101c2b;
+
+      /* Tertiary */
+      --md-sys-color-tertiary: #6b5778;
+      --md-sys-color-on-tertiary: #ffffff;
+      --md-sys-color-tertiary-container: #f2daff;
+      --md-sys-color-on-tertiary-container: #251431;
+
+      /* Surface */
+      --md-sys-color-surface: #f8f9fa;
+      --md-sys-color-on-surface: #1a1c1e;
+      --md-sys-color-surface-variant: #dfe2eb;
+      --md-sys-color-on-surface-variant: #43474e;
+      
+      /* Outline */
+      --md-sys-color-outline: #73777f;
     }
 
     body {
-      font-family: 'Google Sans', Arial, sans-serif;
+      font-family: 'Roboto Flex', Arial, sans-serif;
       background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    .top-app-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      background-color: #ffffff;
+      border-bottom: 1px solid #e0e0e0;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: 64px;
+      box-sizing: border-box;
+    }
+
+    .top-app-bar__section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .top-app-bar__title {
+      margin: 0;
+      font-weight: 400;
+      color: #1f1f1f;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-dot--green {
+      background-color: #34a853;
+    }
+
+    .status-dot--blue {
+      background-color: #0b57d0;
+    }
+
+    .status-text {
+      color: #444746;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .main-layout {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 24px;
+    }
+
+    .sidebar {
+      grid-column: span 12;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    @media (min-width: 1024px) {
+      .sidebar {
+        grid-column: span 4;
+      }
+    }
+
+    .m3-card {
+      background-color: #ffffff;
+      border: 1px solid #c4c7c5;
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .m3-card__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .m3-card__title {
+      margin: 0;
+      color: #444746;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .control-group__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .control-group__label {
+      color: #1f1f1f;
+      font-weight: 500;
+    }
+
+    .control-group__value {
+      color: #0b57d0;
+      font-weight: 700;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .button-group > * {
+      flex: 1;
     }
 
     .terminal-output::-webkit-scrollbar {
@@ -68,11 +239,16 @@
 
     .node-card {
       transition: all 0.3s ease;
+      background-color: #ffffff;
+      border: 1px solid #c4c7c5;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px 1px rgba(0,0,0,0.15);
     }
 
     .node-card.failed {
       filter: grayscale(1);
-      border-color: #ef4444 !important;
+      border-color: #b3261e !important;
     }
 
     #map-overlay {
@@ -82,280 +258,473 @@
       background-position: center right;
       opacity: 0.10;
     }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .main-content {
+      grid-column: span 12;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    @media (min-width: 1024px) {
+      .main-content {
+        grid-column: span 8;
+      }
+    }
+
+    .m3-tabs {
+      --md-sys-color-primary: #0b57d0;
+    }
+
+    .collapsible-card {
+      background-color: #ffffff;
+      border: 1px solid #c4c7c5;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 12px;
+    }
+
+    .collapsible-card__header {
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      background-color: #e8f0fe;
+      transition: background-color 0.2s ease;
+    }
+
+    .collapsible-card__header:hover {
+      background-color: #d2e3fc;
+    }
+
+    .collapsible-card__title {
+      margin: 0;
+      color: #1f1f1f;
+      font-weight: 500;
+    }
+
+    .collapsible-card__content {
+      padding: 16px;
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+      border-top: 1px solid #c4c7c5;
+    }
+
+    .collapsible-card--expanded .collapsible-card__content {
+      display: flex;
+    }
+
+    .collapsible-card__icon {
+      transition: transform 0.2s ease;
+      color: #444746;
+    }
+
+    .collapsible-card--expanded .collapsible-card__icon {
+      transform: rotate(180deg);
+    }
+
+    .tooltip-container {
+      position: relative;
+      display: block;
+      width: 100%;
+    }
+
+    .tooltip-text {
+      visibility: hidden;
+      width: 250px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 4px;
+      padding: 8px;
+      position: absolute;
+      z-index: 100;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 12px;
+      line-height: 1.4;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .tooltip-text::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      margin-left: -5px;
+      border-width: 5px;
+      border-style: solid;
+      border-color: #333 transparent transparent transparent;
+    }
+
+    .tooltip-container:hover .tooltip-text {
+      visibility: visible;
+      opacity: 1;
+    }
   </style>
 </head>
 
 <body class="p-0 m-0">
 
   <!-- Navigation Header -->
-  <nav class="bg-white border-b px-6 py-3 flex justify-between items-center sticky top-0 z-50">
-    <div class="flex items-center space-x-3">
-      <span class="material-symbols-outlined text-blue-600 text-3xl">hub</span>
-      <h1 class="text-xl font-medium text-gray-800 tracking-tight">Cloud Service Mesh (CSM) Visualizer</h1>
+  <header class="top-app-bar">
+    <div class="top-app-bar__section">
+      <span class="material-symbols-outlined" style="color: #0b57d0; font-size: 24px;">hub</span>
+      <h1 class="md-typescale-title-large top-app-bar__title">Cloud Service Mesh (CSM) Visualizer</h1>
     </div>
-    <div class="flex items-center space-x-6">
-      <div class="flex items-center space-x-2">
-        <span class="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-        <span class="text-xs font-semibold text-gray-500 uppercase">VPC: global-vpc</span>
+    <div class="top-app-bar__section" style="gap: 24px;">
+      <div class="status-item">
+        <span class="status-dot status-dot--green"></span>
+        <span class="md-typescale-label-medium status-text">VPC: global-vpc</span>
       </div>
-      <div class="flex items-center space-x-2">
-        <span class="inline-block w-2 h-2 rounded-full bg-blue-500"></span>
-        <span class="text-xs font-semibold text-gray-500 uppercase">Mesh: gke-mesh</span>
+      <div class="status-item">
+        <span class="status-dot status-dot--blue"></span>
+        <span class="md-typescale-label-medium status-text">Mesh: gke-mesh</span>
       </div>
     </div>
-  </nav>
+  </header>
 
-  <main class="max-w-[1400px] mx-auto p-6 grid grid-cols-12 gap-6">
+  <main class="main-layout">
 
     <!-- Sidebar: Controls -->
-    <div class="col-span-12 lg:col-span-4 space-y-6">
+    <div class="sidebar">
 
       <!-- Traffic Generator Section -->
-      <section class="bg-white rounded-xl shadow-sm border p-6">
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Traffic Generator</h2>
-          <span class="material-symbols-outlined text-gray-400">speed</span>
+      <section class="m3-card">
+        <div class="m3-card__header">
+          <h2 class="md-typescale-label-large m3-card__title">Traffic Generator</h2>
+          <span class="material-symbols-outlined" style="color: #444746;">speed</span>
         </div>
 
-        <div class="space-y-4">
-          <div>
-            <div class="flex justify-between mb-2">
-              <label class="text-sm font-medium text-gray-700">Request Rate (RPS)</label>
-              <span id="rps-label" class="text-sm font-bold text-blue-600">5 rps</span>
+        <!-- Workload Configuration -->
+        <div class="collapsible-card" id="card-workload-config">
+          <div class="collapsible-card__header" onclick="toggleCard('card-workload-config')">
+            <h3 class="md-typescale-title-medium collapsible-card__title">Workload Configuration**</h3>
+            <span class="material-symbols-outlined collapsible-card__icon">expand_more</span>
+          </div>
+          <div class="collapsible-card__content">
+            <md-outlined-text-field id="gcp-project-id" label="GCP Project ID" required></md-outlined-text-field>
+            <md-outlined-text-field id="app-namespace" label="App Namespace" required></md-outlined-text-field>
+            <md-outlined-text-field id="app-label" label="App Label" placeholder="Deployment label 'app' value"
+              required></md-outlined-text-field>
+            <md-filled-button id="apply-workload-btn" style="margin-top: 8px;" onclick="applyWorkloadConfig()"
+              disabled>Apply</md-filled-button>
+            <!-- Primary Cluster Dropdown -->
+            <div class="control-group" style="margin-top: 12px;">
+              <label class="md-typescale-body-medium" style="color: #1f1f1f; font-weight: 500;">Primary Cluster</label>
+              <select id="primary-cluster" disabled
+                style="padding: 8px; border-radius: 4px; border: 1px solid #c4c7c5; background-color: #ffffff; font-family: inherit;">
+                <option value="">Select a cluster...</option>
+              </select>
             </div>
-            <input type="range" id="rps-slider" min="1" max="25" value="5"
-              class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+          </div>
           </div>
 
-          <div>
-            <div class="flex justify-between mb-2">
-              <label class="text-sm font-medium text-gray-700">Duration (Seconds)</label>
-              <span id="duration-label" class="text-sm font-bold text-blue-600">60s</span>
-            </div>
-            <input type="range" id="duration-slider" min="10" max="300" step="10" value="60"
-              class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+        <div class="control-group">
+          <div class="control-group__header">
+            <label class="md-typescale-body-medium control-group__label">Request Rate (RPS)</label>
+            <span id="rps-label" class="md-typescale-label-large control-group__value">5 rps</span>
+          </div>
+          <md-slider id="rps-slider" min="1" max="25" value="5" labeled></md-slider>
           </div>
 
-          <div>
-            <label for="service-name" class="text-sm font-medium text-gray-700 mb-2 block">Target Service Name</label>
-            <input type="text" id="service-name" placeholder="e.g.: my-service.namespace"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring-blue-500 focus:border-blue-500 text-sm">
+        <div class="control-group">
+          <div class="control-group__header">
+            <label class="md-typescale-body-medium control-group__label">Duration (Seconds)</label>
+            <span id="duration-label" class="md-typescale-label-large control-group__value">60s</span>
+          </div>
+          <md-slider id="duration-slider" min="10" max="300" step="10" value="60" labeled></md-slider>
           </div>
 
-          <div>
-            <label for="feature-flag" class="text-sm font-medium text-gray-700 mb-2 block">Header: x-feature-flag</label>
-            <input type="text" id="feature-flag" placeholder="e.g.: pvt"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-700 focus:ring-blue-500 focus:border-blue-500 text-sm">
-          </div>
-
-          <div class="flex space-x-3">
-            <button id="start-btn"
-              class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold flex items-center justify-center transition">
-              <span class="material-symbols-outlined mr-2">play_arrow</span> Start
-            </button>
-            <button id="stop-btn"
-              class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 py-3 rounded-lg font-bold flex items-center justify-center transition disabled:opacity-50"
-              disabled>
-              <span class="material-symbols-outlined mr-2">stop</span> Stop
-            </button>
-          </div>
+        <md-outlined-text-field id="service-name" label="Target Service Name *" placeholder="e.g.: my-service.namespace"
+          required></md-outlined-text-field>
+        
+        <md-outlined-text-field id="feature-flag" label="Header: x-feature-flag"
+          placeholder="e.g.: pvt"></md-outlined-text-field>
+        
+        <div class="button-group">
+          <md-filled-button id="start-btn" disabled>
+            <span class="material-symbols-outlined" slot="icon">play_arrow</span>
+            Start
+          </md-filled-button>
+          <md-outlined-button id="stop-btn" disabled>
+            <span class="material-symbols-outlined" slot="icon">stop</span>
+            Stop
+          </md-outlined-button>
         </div>
       </section>
 
       <!-- Istio Controls Section -->
-      <section class="bg-white rounded-xl shadow-sm border p-6">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Istio Steering Policy</h2>
-          <span class="material-symbols-outlined text-gray-400">tune</span>
+      <section class="m3-card">
+        <div class="m3-card__header">
+          <h2 class="md-typescale-label-large m3-card__title">Traffic Steering Policy</h2>
+          <span class="material-symbols-outlined" style="color: #444746;">tune</span>
         </div>
-        <p class="text-[11px] text-gray-500 mb-4 italic">Note: Changes will apply only when you click the Apply Mesh Policy button.</p>
-
-        <div class="space-y-5">
-          <!-- Mode Toggle -->
-          <div class="flex justify-between items-center bg-gray-50 p-1 rounded-xl border">
-            <button id="toggle-100" onclick="switchMode('100')" class="flex-1 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-slate-800 transition">100% Steering</button>
-            <button id="toggle-custom" onclick="switchMode('custom')" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:text-slate-800 transition">Custom Split</button>
-            <button id="toggle-simplerr" onclick="switchMode('simplerr')" class="flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:text-slate-800 transition">Simple RR</button>
+        <p class="md-typescale-body-small" style="color: #444746; margin: 0 0 16px 0; font-style: italic;">Note: Changes will
+          apply only when you click the Apply button for the respective section.</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="tooltip-container">
+            <md-filled-button id="reset-policies-btn" style="width: 100%; margin-bottom: 8px;" onclick="resetPolicies()">Reset Policies</md-filled-button>
+            <span class="tooltip-text">Directs all traffic to Delhi, disregards canaries, and removes auto failover.</span>
           </div>
+          <!-- 1. Full Region Failover -->
+          <div class="collapsible-card" id="card-failover">
+            <div class="collapsible-card__header" onclick="toggleCard('card-failover')">
+              <h3 class="md-typescale-title-medium collapsible-card__title">Control Serving Region</h3>
+              <span class="material-symbols-outlined collapsible-card__icon">expand_more</span>
+            </div>
+            <div class="collapsible-card__content">
+              <label class="md-typescale-body-medium" style="color: #1f1f1f; font-weight: 500;">Target Region (100%
+                Traffic)</label>
+              <div style="display: flex; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <md-radio id="radio-delhi-failover" name="region-failover" value="asia-south2" checked></md-radio>
+                  <label for="radio-delhi-failover" class="md-typescale-body-medium">asia-south2 (Delhi)</label>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <md-radio id="radio-mumbai-failover" name="region-failover" value="asia-south1"></md-radio>
+                  <label for="radio-mumbai-failover" class="md-typescale-body-medium">asia-south1 (Mumbai)</label>
+                </div>
+              </div>
+                <md-filled-button style="margin-top: 8px;" onclick="applyFailover()">Switch Region</md-filled-button>
+                </div>
+                </div>
 
-          <!-- 100% Steering Sub-section -->
-          <div id="section-100" class="space-y-3">
-            <label class="text-xs font-semibold text-gray-600 block mb-1">Target Region (100% Traffic)</label>
-            <div class="grid grid-cols-2 gap-3">
-              <label class="flex flex-col items-center justify-center p-3 border-2 border-blue-500 rounded-xl bg-blue-50 cursor-pointer transition-all" id="card-100-delhi" onclick="select100('asia-south2')">
-                <input type="radio" name="region-100" value="asia-south2" checked class="hidden">
-                <span class="text-xs font-bold text-slate-800">asia-south2</span>
-                <span class="text-[10px] text-gray-400">Delhi</span>
-              </label>
-              <label class="flex flex-col items-center justify-center p-3 border border-gray-200 rounded-xl cursor-pointer transition-all" id="card-100-mumbai" onclick="select100('asia-south1')">
-                <input type="radio" name="region-100" value="asia-south1" class="hidden">
-                <span class="text-xs font-bold text-slate-800">asia-south1</span>
-                <span class="text-[10px] text-gray-400">Mumbai</span>
-              </label>
+          <!-- 2. Split Across Regions -->
+          <div class="collapsible-card" id="card-split">
+            <div class="collapsible-card__header" onclick="toggleCard('card-split')">
+              <h3 class="md-typescale-title-medium collapsible-card__title">Split Across Regions</h3>
+              <span class="material-symbols-outlined collapsible-card__icon">expand_more</span>
+            </div>
+            <div class="collapsible-card__content">
+              <div class="control-group">
+                <div class="control-group__header">
+                  <label class="md-typescale-body-medium control-group__label">Weight-Based Traffic Split</label>
+                  <span id="weight-label-split" class="md-typescale-label-large control-group__value">asia-south2:50% /
+                    asia-south1:50%</span>
+                </div>
+                <md-slider id="weight-slider-split" min="0" max="100" value="50" labeled></md-slider>
+                <div style="display: flex; justify-content: space-between; color: #444746;" class="md-typescale-label-small">
+                  <span>asia-south2</span>
+                  <span>asia-south1</span>
+                </div>
+                </div>
+                <md-filled-button style="margin-top: 8px;" onclick="applySplit()">Apply Split</md-filled-button>
+                </div>
+                </div>
+                
+                <!-- 3. Canary Deployment -->
+                <div class="collapsible-card" id="card-canary">
+                  <div class="collapsible-card__header" onclick="openCanaryCard()">
+                    <h3 class="md-typescale-title-medium collapsible-card__title">Canary Deployment</h3>
+                    <span class="material-symbols-outlined collapsible-card__icon">expand_more</span>
+                  </div>
+                  <div class="collapsible-card__content">
+                    <div id="canary-versions-container" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                      <span class="md-typescale-body-small" style="color: #444746; font-style: italic;">Loading versions...</span>
+                    </div>
+                    
+
+                    
+                    <p id="canary-note" class="md-typescale-body-small" style="color: #444746; margin: 12px 0 4px 0;">* You must select at least 2 versions and the total percentage should be 100% before applying canary.</p>
+                    <md-filled-button id="apply-canary-btn" style="margin-top: 8px;" onclick="applyCanary()" disabled>Apply Canary</md-filled-button>
+                  </div>
+                </div>
+                
+                <!-- 4. Feature Testing -->
+                <div class="collapsible-card" id="card-feature">
+                  <div class="collapsible-card__header" onclick="toggleCard('card-feature')">
+                    <h3 class="md-typescale-title-medium collapsible-card__title">Feature Testing</h3>
+                    <span class="material-symbols-outlined collapsible-card__icon">expand_more</span>
+                  </div>
+                  <div class="collapsible-card__content">
+                    <p class="md-typescale-body-small" style="color: #444746; margin: 0;">Requests with this header will be sent to deployments with the feature label.</p>
+                    <md-filled-button style="margin-top: 8px;" onclick="applyFeatureTesting()">Apply Feature Routing</md-filled-button>
             </div>
           </div>
 
-          <!-- Custom Steering Sub-section -->
-          <div id="section-custom" class="hidden space-y-3">
-            <div class="flex justify-between items-center mb-1">
-              <label class="text-xs font-semibold text-gray-600">Weight-Based Traffic Split</label>
-              <span id="weight-label" class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded font-mono">asia-south2:50% / asia-south1:50%</span>
+          <!-- 5. Automatic Failover -->
+          <div class="collapsible-card" id="card-auto-failover">
+            <div class="collapsible-card__header" onclick="toggleCard('card-auto-failover')">
+              <h3 class="md-typescale-title-medium collapsible-card__title">Automatic Failover</h3>
+              <span class="material-symbols-outlined collapsible-card__icon">expand_more</span>
             </div>
-            <input type="range" id="weight-slider" min="0" max="100" value="50" class="w-full h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-indigo-600">
-            <div class="flex justify-between text-[10px] text-gray-400 font-bold uppercase mt-1">
-              <span>asia-south2</span>
-              <span>asia-south1</span>
+            <div class="collapsible-card__content">
+              <md-filled-button style="margin-top: 8px;" onclick="applyAutoFailover()">Apply Failover Settings</md-filled-button>
             </div>
           </div>
 
-          <button id="apply-btn" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-lg font-bold flex items-center justify-center transition mt-2">
-            <span class="material-symbols-outlined mr-2">cloud_sync</span> Apply Mesh Policy
-          </button>
         </div>
       </section>
 
       <!-- Live Terminal Output -->
-      <section class="bg-slate-900 rounded-xl shadow-lg overflow-hidden flex flex-col h-[300px]">
-        <div class="bg-slate-800 px-4 py-2 flex items-center justify-between border-b border-slate-700">
-          <div class="flex space-x-2">
-            <div class="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-            <div class="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
-            <div class="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+      <!-- Live Terminal Output -->
+      <section
+        style="background-color: #1e1e1e; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; height: 300px;">
+        <div
+          style="background-color: #333333; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; gap: 6px;">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background-color: #ff5f56;"></div>
+            <div style="width: 10px; height: 10px; border-radius: 50%; background-color: #ffbd2e;"></div>
+            <div style="width: 10px; height: 10px; border-radius: 50%; background-color: #27c93f;"></div>
           </div>
-          <span class="text-[10px] text-slate-400 font-mono">service-whereami-logs</span>
+          <span class="md-typescale-label-small" style="color: #aaaaaa; font-family: monospace;">service-whereami-logs</span>
         </div>
-        <div id="terminal"
-          class="terminal-output p-4 font-mono text-[11px] text-green-400 overflow-y-auto flex-1 leading-relaxed space-y-1">
-          <div class="text-slate-500 italic">Waiting for traffic initiation...</div>
+        <div id="terminal" class="terminal-output"
+          style="padding: 16px; font-family: monospace; font-size: 11px; color: #00ff00; overflow-y: auto; flex: 1; line-height: 1.5;">
+          <div style="color: #888888; font-style: italic;">Waiting for traffic initiation...</div>
         </div>
       </section>
     </div>
 
     <!-- Main Panel: Visualizer -->
-    <div class="col-span-12 lg:col-span-8 space-y-6 flex flex-col">
+    <div class="main-content">
 
       <!-- Interactive Map & Node Visualization -->
-      <section class="bg-white rounded-xl shadow-sm border p-6 relative overflow-hidden flex-1 min-h-[500px]">
+      <section class="m3-card" style="position: relative; overflow: hidden; flex: 1; min-height: 500px;">
         <div id="map-overlay" class="absolute inset-0 z-0"></div>
 
-        <div class="relative z-10 flex flex-col h-full">
-          <div class="flex justify-between items-start mb-6">
+        <div style="position: relative; z-index: 10; display: flex; flex-direction: column; height: 100%;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
             <div>
-              <h2 class="text-2xl font-bold text-gray-800">Mesh Connectivity Topology</h2>
-              <p class="text-sm text-gray-500">Real-time failover and outlier visualization</p>
+              <h2 class="md-typescale-headline-small" style="margin: 0; color: #1f1f1f;">Mesh Connectivity Topology</h2>
+              <p class="md-typescale-body-small" style="margin: 4px 0 0 0; color: #444746;">Real-time failover and outlier
+                visualization</p>
             </div>
-            <div class="flex items-center space-x-4">
+            <div style="display: flex; align-items: center; gap: 16px;">
               <!-- Graphic/YAML Switch Toggle -->
-              <div class="flex items-center bg-gray-100 p-1 rounded-lg border text-xs shadow-sm">
-                <button id="view-graphic" onclick="switchView('graphic')" class="px-3 py-1.5 font-bold rounded-md bg-white shadow-sm text-slate-800 transition-all">Graphic</button>
-                <button id="view-yaml" onclick="switchView('yaml')" class="px-3 py-1.5 font-bold rounded-md text-gray-500 hover:text-slate-800 transition-all">YAML</button>
-              </div>
+              <md-tabs class="m3-tabs">
+                <md-secondary-tab id="view-graphic" active onclick="switchView('graphic')">Graphic</md-secondary-tab>
+                <md-secondary-tab id="view-yaml" onclick="switchView('yaml')">YAML</md-secondary-tab>
+              </md-tabs>
               
-              <div class="flex items-center space-x-3 bg-white p-2 border rounded-lg shadow-sm">
-                <div class="flex items-center space-x-1">
-                  <div class="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span class="text-[10px] font-bold text-gray-600">Healthy</span>
+              <div
+                style="display: flex; align-items: center; gap: 12px; background-color: #ffffff; padding: 8px 12px; border: 1px solid #c4c7c5; border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #34a853;"></div>
+                  <span class="md-typescale-label-small" style="color: #444746; font-weight: 700;">Healthy</span>
                 </div>
-                <div class="flex items-center space-x-1">
-                  <div class="w-3 h-3 rounded-full bg-red-500"></div>
-                  <span class="text-[10px] font-bold text-gray-600">Outage</span>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <div style="width: 12px; height: 12px; border-radius: 50%; background-color: #b3261e;"></div>
+                  <span class="md-typescale-label-small" style="color: #444746; font-weight: 700;">Outage</span>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- Central Client Entry Point -->
-          <div class="flex-1 relative w-full h-full" id="visualization-area">
+          <div style="flex: 1; position: relative; width: 100%; height: 100%;" id="visualization-area">
 
             <!-- Graphic View Area -->
-            <div id="graphic-view" class="absolute inset-0 flex items-center justify-center relative w-full h-full">
+            <div id="graphic-view"
+              style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
               <!-- Origin: External LB -->
-              <div id="origin" class="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col items-center">
-                <div class="p-4 bg-white border-2 border-blue-500 rounded-full shadow-lg z-20">
-                  <span class="material-symbols-outlined text-blue-600 text-3xl">public</span>
+              <div id="origin"
+                style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center;">
+                <div
+                  style="padding: 16px; background-color: #ffffff; border: 2px solid #0b57d0; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 20;">
+                  <span class="material-symbols-outlined" style="color: #0b57d0; font-size: 32px;">public</span>
                 </div>
-                <span class="mt-2 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Global LB</span>
+                <span class="md-typescale-label-small"
+                  style="margin-top: 8px; color: #0b57d0; font-weight: 700; background-color: #e8f0fe; padding: 2px 8px; border-radius: 4px;">Global
+                  LB</span>
               </div>
 
               <!-- Cluster: Delhi -->
-              <div id="node-delhi"
-                class="node-card absolute top-10 right-10 w-52 bg-white border-2 border-gray-100 p-4 rounded-xl shadow-md z-20 hover:scale-105 transition-transform">
-                <div class="flex items-center justify-between mb-3">
-                  <div class="flex items-center space-x-2">
-                    <span class="material-symbols-outlined text-blue-600">dns</span>
-                    <span class="text-sm font-bold text-gray-800">Delhi Cluster</span>
+              <div id="node-delhi" class="node-card" style="position: absolute; top: 40px; right: 40px; width: 200px; z-index: 20;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined" style="color: #0b57d0;">dns</span>
+                    <span class="md-typescale-title-small" style="margin: 0; color: #1f1f1f;">Delhi Cluster</span>
                   </div>
-                  <span id="status-delhi" class="w-3 h-3 rounded-full bg-green-500 pulse-green"></span>
+                  <span id="status-delhi" class="status-dot status-dot--green" style="width: 12px; height: 12px;"></span>
                 </div>
-                <div class="space-y-2">
-                  <div class="flex justify-between text-[10px] text-gray-400">
-                    <span>Region</span>
-                    <span class="font-mono text-gray-700">asia-south2</span>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <div style="display: flex; justify-content: space-between;" class="md-typescale-label-small">
+                    <span style="color: #444746;">Region</span>
+                    <span style="color: #1f1f1f; font-family: monospace;">asia-south2</span>
                   </div>
-                  <button onclick="toggleCluster('delhi')"
-                    class="w-full mt-2 py-1.5 bg-red-50 text-red-600 text-[10px] font-bold rounded border border-red-100 hover:bg-red-100 transition">INJECT
-                    FAILURE</button>
+                  <md-outlined-button style="margin-top: 8px;" onclick="toggleCluster('delhi')">INJECT FAILURE</md-outlined-button>
                 </div>
               </div>
 
               <!-- Cluster: Mumbai -->
-              <div id="node-mumbai"
-                class="node-card absolute bottom-10 right-10 w-52 bg-white border-2 border-gray-100 p-4 rounded-xl shadow-md z-20 hover:scale-105 transition-transform">
-                <div class="flex items-center justify-between mb-3">
-                  <div class="flex items-center space-x-2">
-                    <span class="material-symbols-outlined text-purple-600">dns</span>
-                    <span class="text-sm font-bold text-gray-800">Mumbai Cluster</span>
+              <div id="node-mumbai" class="node-card"
+                style="position: absolute; bottom: 40px; right: 40px; width: 200px; z-index: 20;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined" style="color: #6750a4;">dns</span>
+                    <span class="md-typescale-title-small" style="margin: 0; color: #1f1f1f;">Mumbai Cluster</span>
                   </div>
-                  <span id="status-mumbai" class="w-3 h-3 rounded-full bg-green-500 pulse-green"></span>
+                  <span id="status-mumbai" class="status-dot status-dot--green" style="width: 12px; height: 12px;"></span>
                 </div>
-                <div class="space-y-2">
-                  <div class="flex justify-between text-[10px] text-gray-400">
-                    <span>Region</span>
-                    <span class="font-mono text-gray-700">asia-south1</span>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <div style="display: flex; justify-content: space-between;" class="md-typescale-label-small">
+                    <span style="color: #444746;">Region</span>
+                    <span style="color: #1f1f1f; font-family: monospace;">asia-south1</span>
                   </div>
-                  <button onclick="toggleCluster('mumbai')"
-                    class="w-full mt-2 py-1.5 bg-red-50 text-red-600 text-[10px] font-bold rounded border border-red-100 hover:bg-red-100 transition">INJECT
-                    FAILURE</button>
+                  <md-outlined-button style="margin-top: 8px;" onclick="toggleCluster('mumbai')">INJECT FAILURE</md-outlined-button>
                 </div>
               </div>
 
               <!-- Connection Paths (SVG) -->
-              <svg class="absolute inset-0 w-full h-full pointer-events-none z-10" id="svg-layer">
-                <path id="path-delhi" d="" stroke="#cbd5e1" stroke-width="2" fill="none" stroke-dasharray="8,4" />
-                <path id="path-mumbai" d="" stroke="#cbd5e1" stroke-width="2" fill="none" stroke-dasharray="8,4" />
+              <svg style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;" id="svg-layer">
+                <path id="path-delhi" d="" stroke="#c4c7c5" stroke-width="2" fill="none" stroke-dasharray="8,4" />
+                <path id="path-mumbai" d="" stroke="#c4c7c5" stroke-width="2" fill="none" stroke-dasharray="8,4" />
               </svg>
             </div>
 
             <!-- YAML View Area -->
-            <div id="yaml-view" class="absolute inset-0 flex flex-col hidden p-2 bg-slate-950 rounded-xl overflow-hidden">
+            <div id="yaml-view" class="hidden"
+              style="position: absolute; inset: 0; display: flex; flex-direction: column; background-color: #1e1e1e; border-radius: 12px; padding: 16px;">
                 <!-- Context Selector Bar -->
-                <div class="flex justify-between items-center mb-2 px-2 pb-2 border-b border-slate-800">
-                    <div class="flex items-center space-x-2">
-                         <span class="material-symbols-outlined text-slate-400 text-sm">hub</span>
-                         <span class="text-xs font-bold text-slate-300">Source Context</span>
+                <div
+                  style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid #3c3c3c; padding-bottom: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined" style="color: #aaaaaa;">hub</span>
+                    <span class="md-typescale-label-small" style="color: #aaaaaa;">Source Context</span>
                     </div>
-                    <select id="context-selector" onchange="onContextChange()" class="bg-slate-800 border border-slate-700 hover:border-slate-600 text-slate-200 text-xs rounded-md px-3 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer">
+                    <select id="context-selector" onchange="onContextChange()"
+                      style="background-color: #333333; color: #d4d4d4; border: 1px solid #555555; border-radius: 4px; padding: 4px 8px; font-family: monospace; font-size: 11px;">
                         <option value="current">Detecting context...</option>
                     </select>
                 </div>
 
                 <!-- Panels Row -->
-                <div class="flex-1 flex space-x-4 overflow-hidden">
+                <div style="flex: 1; display: flex; gap: 16px; overflow: hidden;">
                     <!-- Left: DestinationRule -->
-                    <div class="flex-1 bg-slate-900 rounded-lg p-4 border border-slate-800 flex flex-col overflow-hidden">
-                        <div class="text-xs font-bold text-slate-400 mb-2 pb-2 border-b border-slate-800 flex justify-between items-center">
-                            <span>DestinationRule: whereami (<span id="dr-context-tag" class="text-blue-400">current</span>)</span>
-                            <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                    <div
+                      style="flex: 1; background-color: #252526; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; overflow: hidden;">
+                      <div class="md-typescale-label-small"
+                        style="color: #aaaaaa; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #3c3c3c; display: flex; justify-content: space-between; align-items: center;">
+                        <span>DestinationRule: whereami (<span id="dr-context-tag" style="color: #0b57d0;">current</span>)</span>
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #0b57d0;"></span>
                         </div>
-                        <pre id="dr-yaml" class="text-[10px] text-green-400 font-mono overflow-y-auto flex-1 leading-relaxed whitespace-pre-wrap"></pre>
+                        <pre id="dr-yaml"
+                          style="margin: 0; font-family: monospace; font-size: 11px; color: #00ff00; overflow-y: auto; flex: 1; line-height: 1.5; white-space: pre-wrap;"></pre>
                     </div>
                     <!-- Right: VirtualService -->
-                    <div class="flex-1 bg-slate-900 rounded-lg p-4 border border-slate-800 flex flex-col overflow-hidden">
-                        <div class="text-xs font-bold text-slate-400 mb-2 pb-2 border-b border-slate-800 flex justify-between items-center">
-                            <span>VirtualService: whereami-vs (<span id="vs-context-tag" class="text-purple-400">current</span>)</span>
-                            <span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
+                    <div
+                      style="flex: 1; background-color: #252526; border-radius: 8px; padding: 16px; display: flex; flex-direction: column; overflow: hidden;">
+                      <div class="md-typescale-label-small"
+                        style="color: #aaaaaa; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #3c3c3c; display: flex; justify-content: space-between; align-items: center;">
+                        <span>VirtualService: whereami-vs (<span id="vs-context-tag" style="color: #b58900;">current</span>)</span>
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #b58900;"></span>
                         </div>
-                        <pre id="vs-yaml" class="text-[10px] text-green-400 font-mono overflow-y-auto flex-1 leading-relaxed whitespace-pre-wrap"></pre>
+                        <pre id="vs-yaml"
+                          style="margin: 0; font-family: monospace; font-size: 11px; color: #00ff00; overflow-y: auto; flex: 1; line-height: 1.5; white-space: pre-wrap;"></pre>
                     </div>
                 </div>
             </div>
@@ -365,35 +734,22 @@
       </section>
 
       <!-- Statistics Dashboard -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <section class="bg-white rounded-xl shadow-sm border p-6">
-          <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Requests Distribution</h3>
-          <div class="h-40 relative">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+        <section class="m3-card">
+          <h3 class="md-typescale-label-large m3-card__title" style="margin-bottom: 16px;">Requests Distribution</h3>
+          <div style="height: 160px; position: relative;">
             <canvas id="traffic-chart"></canvas>
           </div>
         </section>
 
-        <section class="bg-white rounded-xl shadow-sm border p-6">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-sm font-bold text-gray-400 uppercase tracking-widest">Global Health Status</h3>
-            <span id="mesh-status-badge"
-              class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">OPERATIONAL</span>
+        <section class="m3-card">
+          <div class="m3-card__header">
+            <h3 class="md-typescale-label-large m3-card__title">Mesh Health Status</h3>
+            <span id="mesh-status-badge" class="md-typescale-label-small"
+              style="background-color: #e6f4ea; color: #137333; padding: 4px 8px; border-radius: 12px; font-weight: 700;">OPERATIONAL</span>
           </div>
-          <div class="space-y-3">
-            <div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
-              <div class="flex items-center space-x-3">
-                <span class="material-symbols-outlined text-blue-500 text-lg">public</span>
-                <span class="text-xs font-bold text-gray-700">Delhi (Local)</span>
-              </div>
-              <span id="health-text-delhi" class="text-xs text-green-600 font-bold">HEALTHY</span>
-            </div>
-            <div class="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg">
-              <div class="flex items-center space-x-3">
-                <span class="material-symbols-outlined text-purple-500 text-lg">public</span>
-                <span class="text-xs font-bold text-gray-700">Mumbai (Remote)</span>
-              </div>
-              <span id="health-text-mumbai" class="text-xs text-green-600 font-bold">HEALTHY</span>
-            </div>
+          <div id="mesh-health-container" style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="color: #444746; font-style: italic;">Loading mesh health...</div>
           </div>
         </section>
       </div>
@@ -435,12 +791,112 @@
       outlier_detection_enabled: true
     };
 
+    function updateMeshHealth(memberships) {
+      const container = document.getElementById('mesh-health-container');
+      if (!container) return;
+      
+      container.innerHTML = '';
+      
+      memberships.forEach(m => {
+        const item = document.createElement('div');
+        item.style.display = 'flex';
+        item.style.justifyContent = 'space-between';
+        item.style.alignItems = 'center';
+        item.style.backgroundColor = '#f7f2fa';
+        item.style.padding = '12px';
+        item.style.borderRadius = '8px';
+        
+        const leftDiv = document.createElement('div');
+        leftDiv.style.display = 'flex';
+        leftDiv.style.alignItems = 'center';
+        leftDiv.style.gap = '12px';
+        
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined';
+        icon.style.color = '#0b57d0';
+        icon.textContent = 'public';
+        
+        const text = document.createElement('span');
+        text.className = 'md-typescale-body-medium';
+        text.style.color = '#1f1f1f';
+        text.style.fontWeight = '500';
+        text.textContent = `${m.name} (${m.location})`;
+        
+        leftDiv.appendChild(icon);
+        leftDiv.appendChild(text);
+        
+        const statusLabel = document.createElement('span');
+        statusLabel.className = 'md-typescale-label-large';
+        statusLabel.textContent = m.status;
+        
+        if (m.status === 'READY') {
+          statusLabel.style.color = '#137333';
+        } else {
+          statusLabel.style.color = '#b3261e';
+        }
+        
+        item.appendChild(leftDiv);
+        item.appendChild(statusLabel);
+        
+        container.appendChild(item);
+      });
+    }
+
     // Initialize UI
     document.addEventListener('DOMContentLoaded', () => {
       initChart();
       // Small delay to ensure DOM is fully rendered for accurate bounding boxes
       setTimeout(updatePaths, 100);
       window.addEventListener('resize', updatePaths);
+
+      // Workload Configuration logic
+      const projectIdInput = document.getElementById('gcp-project-id');
+      const namespaceInput = document.getElementById('app-namespace');
+      const appLabelInput = document.getElementById('app-label');
+      const applyBtn = document.getElementById('apply-workload-btn');
+      const clusterSelect = document.getElementById('primary-cluster');
+
+      function checkWorkloadInputs() {
+        const hasValues = projectIdInput.value.trim() !== '' &&
+          namespaceInput.value.trim() !== '' &&
+          appLabelInput.value.trim() !== '';
+        applyBtn.disabled = !hasValues;
+        clusterSelect.disabled = !hasValues;
+      }
+
+      projectIdInput.addEventListener('input', checkWorkloadInputs);
+      namespaceInput.addEventListener('input', checkWorkloadInputs);
+      appLabelInput.addEventListener('input', checkWorkloadInputs);
+
+      // Fetch initial config
+      fetch('/api/initialConfig')
+        .then(response => response.json())
+        .then(data => {
+          if (data.gcp_project_id) projectIdInput.value = data.gcp_project_id;
+          if (data.app_namespace) namespaceInput.value = data.app_namespace;
+          if (data.app_label) appLabelInput.value = data.app_label;
+          checkWorkloadInputs();
+        })
+        .catch(err => console.error("Error fetching initial config:", err));
+
+      // Fetch fleet memberships
+      fetch('/api/fleetMemberships')
+        .then(response => response.json())
+        .then(data => {
+          if (data.memberships) {
+            data.memberships.forEach(m => {
+              const option = document.createElement('option');
+              option.value = m.name;
+              option.textContent = `${m.name} (${m.location})`;
+              clusterSelect.appendChild(option);
+            });
+          }
+        })
+        .catch(err => console.error("Error fetching fleet memberships:", err));
+
+      clusterSelect.addEventListener('change', (e) => {
+        updatePrimaryCluster(e.target.value);
+      });
 
       // Fetch initial traffic split settings from ISTIO Destination Rules API
       fetch('/api/destination-rules/distribute')
@@ -474,7 +930,16 @@
       const ws = new WebSocket(wsUrl);
 
       ws.onmessage = (event) => {
-        logTerminal(event.data, 'green');
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'health_update') {
+            updateMeshHealth(data.data);
+          } else {
+            logTerminal(event.data, 'green');
+          }
+        } catch (e) {
+          logTerminal(event.data, 'green');
+        }
       };
 
       ws.onerror = (error) => {
@@ -549,24 +1014,15 @@
 
     let yamlSocket = null;
 
-    function switchView(view) {
-      const btnGraphic = document.getElementById('view-graphic');
-      const btnYaml = document.getElementById('view-yaml');
+        function switchView(view) {
       const secGraphic = document.getElementById('graphic-view');
       const secYaml = document.getElementById('yaml-view');
 
-      const activeClass = "px-3 py-1.5 font-bold rounded-md bg-white shadow-sm text-slate-800 transition-all";
-      const inactiveClass = "px-3 py-1.5 font-bold rounded-md text-gray-500 hover:text-slate-800 transition-all";
-
-      if (view === 'graphic') {
-        btnGraphic.className = activeClass;
-        btnYaml.className = inactiveClass;
+        if (view === 'graphic') {
         if(secGraphic) secGraphic.classList.remove('hidden');
         if(secYaml) secYaml.classList.add('hidden');
         cleanupYamlSocket();
       } else {
-        btnYaml.className = activeClass;
-        btnGraphic.className = inactiveClass;
         if(secYaml) secYaml.classList.remove('hidden');
         if(secGraphic) secGraphic.classList.add('hidden');
         initYamlSocket();
@@ -675,112 +1131,373 @@
        fetchContexts();
     });
 
+        // UI State
+        let currentMode = '100';
+
+        function toggleCard(id) {
+          const card = document.getElementById(id);
+          card.classList.toggle('collapsible-card--expanded');
+        }
+
+        let canaryVersionsLoaded = false;
+        let selectedVersions = {};
+
+        function openCanaryCard() {
+          toggleCard('card-canary');
+          const card = document.getElementById('card-canary');
+          if (card.classList.contains('collapsible-card--expanded') && !canaryVersionsLoaded) {
+            fetchCanaryVersions();
+          }
+        }
+
+        async function fetchCanaryVersions() {
+          const container = document.getElementById('canary-versions-container');
+          container.innerHTML = '<span class="md-typescale-body-small" style="color: #444746; font-style: italic;">Loading versions...</span>';
+          
+          try {
+            const response = await fetch('/api/canary/versions');
+            const data = await response.json();
+            
+            if (data.error) {
+              container.innerHTML = `<span class="md-typescale-body-small" style="color: #b3261e;">Error: ${data.error}</span>`;
+              return;
+            }
+            
+            if (data.warning) {
+              container.innerHTML = `<span class="md-typescale-body-small" style="color: #b58900;">${data.warning}</span>`;
+              return;
+            }
+            
+            const versions = data.versions;
+            if (!versions || versions.length === 0) {
+              container.innerHTML = '<span class="md-typescale-body-small" style="color: #444746;">No versions found for the current workload configuration.</span>';
+              return;
+            }
+            
+            container.innerHTML = '';
+            selectedVersions = {};
+            
+            versions.forEach(version => {
+              const row = document.createElement('div');
+              row.style.display = 'flex';
+              row.style.alignItems = 'center';
+              row.style.justifyContent = 'space-between';
+              row.style.gap = '16px';
+              
+              const leftDiv = document.createElement('div');
+              leftDiv.style.display = 'flex';
+              leftDiv.style.alignItems = 'center';
+              leftDiv.style.gap = '8px';
+              
+              const checkbox = document.createElement('input');
+              checkbox.type = 'checkbox';
+              checkbox.id = `checkbox-version-${version}`;
+              checkbox.value = version;
+              checkbox.addEventListener('change', (e) => handleVersionSelection(e, version));
+              
+              const label = document.createElement('label');
+              label.htmlFor = `checkbox-version-${version}`;
+              label.className = 'md-typescale-body-medium';
+              label.textContent = `Version: ${version}`;
+              
+              leftDiv.appendChild(checkbox);
+              leftDiv.appendChild(label);
+              
+              const rightDiv = document.createElement('div');
+              rightDiv.style.display = 'flex';
+              rightDiv.style.alignItems = 'center';
+              rightDiv.style.gap = '4px';
+              rightDiv.style.visibility = 'hidden'; // Hidden until checked
+              rightDiv.id = `input-container-${version}`;
+              
+              const input = document.createElement('input');
+              input.type = 'number';
+              input.id = `input-version-${version}`;
+              input.placeholder = '0';
+              input.style.width = '60px';
+              input.style.padding = '4px';
+              input.style.borderRadius = '4px';
+              input.style.border = '1px solid #c4c7c5';
+              input.addEventListener('input', () => validateCanaryInputs());
+              
+              const percentSymbol = document.createElement('span');
+              percentSymbol.className = 'md-typescale-body-medium';
+              percentSymbol.textContent = '%';
+              
+              rightDiv.appendChild(input);
+              rightDiv.appendChild(percentSymbol);
+              
+              row.appendChild(leftDiv);
+              row.appendChild(rightDiv);
+              
+              container.appendChild(row);
+            });
+            
+            canaryVersionsLoaded = true;
+          } catch (error) {
+            console.error("Error fetching canary versions:", error);
+            container.innerHTML = `<span class="md-typescale-body-small" style="color: #b3261e;">Failed to fetch versions: ${error.message}</span>`;
+          }
+        }
+
+        function handleVersionSelection(event, version) {
+          const inputContainer = document.getElementById(`input-container-${version}`);
+          const input = document.getElementById(`input-version-${version}`);
+          
+          if (event.target.checked) {
+            inputContainer.style.visibility = 'visible';
+            selectedVersions[version] = 0; // Initialize with 0
+          } else {
+            inputContainer.style.visibility = 'hidden';
+            input.value = '';
+            delete selectedVersions[version];
+          }
+          validateCanaryInputs();
+        }
+
+        function validateCanaryInputs() {
+          const applyBtn = document.getElementById('apply-canary-btn');
+          const note = document.getElementById('canary-note');
+          
+          const selectedCount = Object.keys(selectedVersions).length;
+          let totalPercent = 0;
+          
+          for (const version in selectedVersions) {
+            const input = document.getElementById(`input-version-${version}`);
+            const val = parseInt(input.value) || 0;
+            selectedVersions[version] = val;
+            totalPercent += val;
+          }
+          
+          console.log(`Validation: Selected=${selectedCount}, Total%=${totalPercent}`);
+          
+          const isValid = selectedCount >= 2 && totalPercent === 100;
+          
+          applyBtn.disabled = !isValid;
+          
+          if (isValid) {
+            note.style.color = '#137333'; // Green for success
+            note.textContent = '✓ Ready to apply canary deployment.';
+          } else {
+            note.style.color = '#b3261e'; // Red for error
+            note.textContent = '* You must select at least 2 versions and the total percentage should be 100% before applying canary.';
+          }
+        }
+
+        async function applyWorkloadConfig() {
+          const projectId = document.getElementById('gcp-project-id').value;
+          const namespace = document.getElementById('app-namespace').value;
+          const appLabel = document.getElementById('app-label').value;
+
+          if (!projectId || !namespace || !appLabel) {
+            logTerminal('[VALIDATION ERROR] Please fill in all mandatory fields.', 'red');
+            return;
+          }
+
+          logTerminal(`Applying Workload Config: Project=${projectId}, Namespace=${namespace}, Label=${appLabel}`, 'cyan');
+
+          try {
+            const response = await fetch('/api/workloadConfig', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                gcp_project_id: projectId,
+                app_namespace: namespace,
+                app_label: appLabel
+              }),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+              logTerminal('[API SUCCESS] Workload configuration applied successfully.', 'blue');
+            } else {
+              logTerminal(`[API ERROR] Failed to apply workload config: ${data.detail || data.message}`, 'red');
+            }
+          } catch (error) {
+            logTerminal(`[API ERROR] Failed to apply workload config: ${error.message}`, 'red');
+          }
+        }
+
+        async function updatePrimaryCluster(selectedValue) {
+          if (!selectedValue) return;
+          
+          logTerminal(`Updating Primary Cluster to: ${selectedValue}`, 'cyan');
+          
+          try {
+            const response = await fetch('/api/primaryCluster', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                primary_cluster: selectedValue
+              }),
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+              logTerminal(`[API SUCCESS] Config cluster updated to ${selectedValue}.`, 'blue');
+            } else {
+              logTerminal(`[API ERROR] Failed to update config cluster: ${data.detail || data.message}`, 'red');
+            }
+          } catch (error) {
+            logTerminal(`[API ERROR] Failed to update config cluster: ${error.message}`, 'red');
+          }
+        }
+
     // UI Mode toggling
     function switchMode(mode) {
-      const btn100 = document.getElementById('toggle-100');
-      const btnCustom = document.getElementById('toggle-custom');
-      const btnSimple = document.getElementById('toggle-simplerr');
+      currentMode = mode;
       const sec100 = document.getElementById('section-100');
       const secCustom = document.getElementById('section-custom');
 
-      const activeClass = "flex-1 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-slate-800 transition";
-      const inactiveClass = "flex-1 py-2 text-xs font-bold rounded-lg text-gray-500 hover:text-slate-800 transition";
-
-      if (btn100 && btnCustom && btnSimple) {
-        btn100.className = inactiveClass;
-        btnCustom.className = inactiveClass;
-        btnSimple.className = inactiveClass;
-      }
-      
       if (sec100 && secCustom) {
         sec100.classList.add('hidden');
         secCustom.classList.add('hidden');
       }
 
       if (mode === '100') {
-        if (btn100) btn100.className = activeClass;
         if (sec100) sec100.classList.remove('hidden');
       } else if (mode === 'custom') {
-        if (btnCustom) btnCustom.className = activeClass;
         if (secCustom) secCustom.classList.remove('hidden');
       } else if (mode === 'simplerr') {
-        if (btnSimple) btnSimple.className = activeClass;
+        // No extra section to show
       }
     }
 
     function select100(region) {
-      const radio = document.querySelector(`input[name="region-100"][value="${region}"]`);
-      if (radio) radio.checked = true;
-      
-      const cardDelhi = document.getElementById('card-100-delhi');
-      const cardMumbai = document.getElementById('card-100-mumbai');
-      if (region === 'asia-south2') {
-        cardDelhi.className = "flex flex-col items-center justify-center p-3 border-2 border-blue-500 rounded-xl bg-blue-50 cursor-pointer transition-all";
-        cardMumbai.className = "flex flex-col items-center justify-center p-3 border border-gray-200 rounded-xl cursor-pointer transition-all";
-      } else {
-        cardMumbai.className = "flex flex-col items-center justify-center p-3 border-2 border-blue-500 rounded-xl bg-blue-50 cursor-pointer transition-all";
-        cardDelhi.className = "flex flex-col items-center justify-center p-3 border border-gray-200 rounded-xl cursor-pointer transition-all";
-      }
+      // Browser handles radio state automatically.
     }
 
     // Backend API Interaction
-    async function applyPolicy(config = null) {
-      const btn = document.getElementById('apply-btn');
-      btn.innerHTML = '<span class="material-symbols-outlined mr-2 animate-spin">sync</span> Applying...';
-      btn.disabled = true;
-
-      const btnSimple = document.getElementById('toggle-simplerr');
-      const btn100 = document.getElementById('toggle-100');
+        async function applyFailover() {
+          const checkedRadio = Array.from(document.querySelectorAll('md-radio[name="region-failover"]')).find(r => r.checked);
+          if (!checkedRadio) return;
       
-      const isSimple = btnSimple ? btnSimple.classList.contains('bg-white') : false;
-      const is100 = btn100 ? btn100.classList.contains('bg-white') : true; // fallback
+        const region = checkedRadio.value;
+        const payload = { mode: '100', distribute: {} };
+        payload.distribute[region + "/*"] = 100;
       
-      let payload = { mode: 'custom', distribute: {} };
-
-      if (isSimple) {
-        payload.mode = 'simple_rr';
-      } else if (is100) {
-        payload.mode = '100';
-        const checkedRadio = document.querySelector('input[name="region-100"]:checked');
-        if (checkedRadio) {
-            payload.distribute[checkedRadio.value + "/*"] = 100;
-        }
-      } else {
-        payload.mode = 'custom';
-        const val = parseInt(document.getElementById('weight-slider').value);
-        payload.distribute['asia-south1/*'] = val;
-        payload.distribute['asia-south2/*'] = 100 - val;
+        await callDistributeApi(payload);
       }
 
-      console.log("Applying Policy Data:", payload);
+        async function applySplit() {
+          const val = parseInt(document.getElementById('weight-slider-split').value);
+          const payload = { mode: 'custom', distribute: {} };
+          payload.distribute['asia-south1/*'] = val;
+          payload.distribute['asia-south2/*'] = 100 - val;
+      
+        await callDistributeApi(payload);
+      }
 
+    async function resetPolicies() {
+      logTerminal('Resetting policies to default...', 'cyan');
       try {
-        const res = await fetch('/api/destination-rules/distribute', {
+        const response = await fetch('/api/resetPolicies', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
         });
-
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-
-        await res.json();
-        logTerminal(`[API SUCCESS] Istio steering policy applied to DestinationRule.`, 'blue');
-        
-        // Update local appliedConfig for simulation
-        if (payload.mode === 'custom') {
-             appliedConfig.weight_mumbai = parseInt(document.getElementById('weight-slider').value);
-        } else if (payload.mode === '100') {
-             appliedConfig.weight_mumbai = payload.distribute['asia-south1/*'] || 0;
+        const data = await response.json();
+        if (data.status === 'success') {
+          logTerminal('Policies reset successfully.', 'green');
         } else {
-             appliedConfig.weight_mumbai = 50; // default for simple_rr in simulation visually
+          logTerminal(`Error resetting policies: ${data.message}`, 'red');
+          if (data.errors) {
+            data.errors.forEach(err => logTerminal(`  -> ${err}`, 'red'));
+          }
+        }
+      } catch (error) {
+        logTerminal(`Failed to reset policies: ${error}`, 'red');
+      }
+    }
+
+  async function applyCanary() {
+    const selections = [];
+    for (const version in selectedVersions) {
+      selections.push({
+        version: version,
+        weight: selectedVersions[version]
+      });
+    }
+    
+    logTerminal(`Applying Canary Deployment: ${JSON.stringify(selections)}`, 'cyan');
+    
+    try {
+      const response = await fetch('/api/canary/apply', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ selections: selections }),
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        logTerminal(`[API SUCCESS] Canary deployment applied.`, 'blue');
+      } else {
+        logTerminal(`[API ERROR] Failed to apply canary: ${data.detail || data.message}`, 'red');
+      }
+    } catch (error) {
+      logTerminal(`[API ERROR] Failed to apply canary: ${error.message}`, 'red');
+    }
+  }
+
+        async function applyFeatureTesting() {
+          logTerminal('Applying Feature Routing policies...', 'cyan');
+          try {
+            const response = await fetch('/api/applyFeatureTesting', {
+              method: 'POST',
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+              logTerminal('Feature Routing policies applied successfully.', 'green');
+            } else {
+              logTerminal(`Error applying Feature Routing: ${data.message}`, 'red');
+              if (data.errors) {
+                data.errors.forEach(err => logTerminal(`  -> ${err}`, 'red'));
+              }
+            }
+          } catch (error) {
+            logTerminal(`Failed to apply Feature Routing: ${error}`, 'red');
+          }
         }
 
+        async function applyAutoFailover() {
+          logTerminal('Applying Automatic Failover policies...', 'cyan');
+          try {
+            const response = await fetch('/api/applyAutoFailover', {
+              method: 'POST',
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+              logTerminal('Automatic Failover policies applied successfully.', 'green');
+            } else {
+              logTerminal(`Error applying Automatic Failover: ${data.message}`, 'red');
+              if (data.errors) {
+                data.errors.forEach(err => logTerminal(`  -> ${err}`, 'red'));
+              }
+            }
+          } catch (error) {
+            logTerminal(`Failed to apply Automatic Failover: ${error}`, 'red');
+          }
+        }
+
+
+        async function callDistributeApi(payload) {
+          logTerminal(`Applying policy: ${JSON.stringify(payload)}`, 'cyan');
+          try {
+            const res = await fetch('/api/destination-rules/distribute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+          if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+          logTerminal(`[API SUCCESS] Istio steering policy applied.`, 'blue');
       } catch (e) {
         logTerminal(`[API ERROR] Failed to apply policy: ${e.message}`, 'red');
-      }
-
-      btn.innerHTML = '<span class="material-symbols-outlined mr-2">cloud_sync</span> Apply Mesh Policy';
-      btn.disabled = false;
+        }
     }
 
     async function startTraffic() {
@@ -1026,14 +1743,20 @@
       }
     });
 
-    document.getElementById('weight-slider').addEventListener('input', (e) => {
+        document.getElementById('weight-slider-split').addEventListener('input', (e) => {
       const val = e.target.value;
-      document.getElementById('weight-label').textContent = `asia-south2:${100 - val}% / asia-south1:${val}%`;
+        document.getElementById('weight-label-split').textContent = `asia-south2:${100 - val}% / asia-south1:${val}%`;
+      });
+
+
+
+        document.getElementById('service-name').addEventListener('input', (e) => {
+          const val = e.target.value;
+          document.getElementById('start-btn').disabled = !val.trim();
     });
 
     document.getElementById('start-btn').addEventListener('click', startTraffic);
-    document.getElementById('stop-btn').addEventListener('click', stopTraffic);
-    document.getElementById('apply-btn').addEventListener('click', applyPolicy);
+      document.getElementById('stop-btn').addEventListener('click', stopTraffic);
 
   </script>
 </body>

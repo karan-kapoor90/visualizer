@@ -3,3 +3,5 @@ k apply -f manifests/workload/mesh/multi-region/ --context delhi && k apply -f m
 k apply -f manifests/workload/mesh/canary/ --context delhi && k apply -f manifests/workload/mesh/canary/ --context mumbai
 
 k apply -f manifests/workload/mesh/featureflag/ --context delhi && k apply -f manifests/workload/mesh/featureflag/ --context mumbai
+
+k apply -f manifests/workload/mesh/auto-failover/destination-rule.yaml --context gke-delhi &&  k apply -f manifests/workload/mesh/auto-failover/destination-rule.yaml --context gke-mumbai

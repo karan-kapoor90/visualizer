@@ -6,11 +6,13 @@ metadata:
   labels:
     app: whereami
     version: v2.1
+    featureflag: pvt
 spec:
   replicas: 1 #whereami can be deployed as multiple identical replicas
   selector:
     matchLabels:
       app: whereami
+      version: v2.1
   template:
     metadata:
       labels:

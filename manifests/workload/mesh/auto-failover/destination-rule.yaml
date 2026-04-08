@@ -5,7 +5,6 @@ metadata:
   namespace: ha
 spec:
   host: whereami.ha.svc.cluster.local
-  subsets: []
   trafficPolicy:
     connectionPool:
       http:
@@ -14,8 +13,10 @@ spec:
       simple: ROUND_ROBIN
       localityLbSetting:
         enabled: true
-        distribute:
-          - from: "*"
-            to: 
-              "asia-south2/*": 100
-    outlierDetection: {}
+        failover:
+        - from: asia-south1
+          to: asia-south2
+    outlierDetection:
+      baseEjectionTime: 1m
+      consecutive5xxErrors: 1
+      interval: 1s
