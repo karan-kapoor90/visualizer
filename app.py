@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocke
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from kubernetes import client, config, dynamic
+from kubernetes import client, config, dynamic, watch
 from kubernetes.client import api_client
 import uvicorn
 import yaml
@@ -51,16 +51,36 @@ async def websocket_yaml_endpoint(websocket: WebSocket):
                  target_context = active['name'] if active else 'delhi'
              except Exception:
                  target_context = 'delhi'
-
+ 
         print(f"WS YAML using context: {target_context}")
         api_client_ctx = config.new_client_from_config(config_file=kubeconfig_file, context=target_context)
         dyn_client_ctx = dynamic.DynamicClient(api_client_ctx)
         
-        while True:
-            try:
-                dr_api = dyn_client_ctx.resources.get(api_version=ISTIO_VERSION, group=ISTIO_GROUP, kind="DestinationRule")
-                vs_api = dyn_client_ctx.resources.get(api_version=ISTIO_VERSION, group=ISTIO_GROUP, kind="VirtualService")
+        dr_api = dyn_client_ctx.resources.get(api_version=ISTIO_VERSION, group=ISTIO_GROUP, kind="DestinationRule")
+        vs_api = dyn_client_ctx.resources.get(api_version=ISTIO_VERSION, group=ISTIO_GROUP, kind="VirtualService")
+        
+        queue = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+        
+        def callback(event):
+            loop.call_soon_threadsafe(queue.put_nowait, event)
+            
+        def start_watch(api, name):
+            while True:
+                try:
+                    for event in api.watch(namespace=NAMESPACE, field_selector=f"metadata.name={name}"):
+                        callback(event)
+                except Exception as e:
+                    print(f"Watch error for {name}: {e}")
+                    time.sleep(5) # Wait before retry
                 
+        # Start watches in background threads
+        dr_watch_task = asyncio.create_task(asyncio.to_thread(start_watch, dr_api, "whereami"))
+        vs_watch_task = asyncio.create_task(asyncio.to_thread(start_watch, vs_api, "whereami-vs"))
+        
+        # Helper to fetch and send
+        async def fetch_and_send():
+            try:
                 dr = dr_api.get(name="whereami", namespace=NAMESPACE)
                 vs = vs_api.get(name="whereami-vs", namespace=NAMESPACE)
                 
@@ -70,7 +90,7 @@ async def websocket_yaml_endpoint(websocket: WebSocket):
                         dr_dict['metadata'].pop('annotations', None)
                         dr_dict['metadata'].pop('managedFields', None)
                 dr_yaml = yaml.dump(dr_dict)
-
+ 
                 vs_dict = vs.to_dict()
                 if 'metadata' in vs_dict:
                     if isinstance(vs_dict['metadata'], dict):
@@ -80,11 +100,35 @@ async def websocket_yaml_endpoint(websocket: WebSocket):
                 
                 await websocket.send_json({
                     "dr": dr_yaml,
-                    "vs": vs_yaml
+                    "vs": vs_yaml,
+                    "dr_data": dr_dict
                 })
+            except WebSocketDisconnect:
+                raise
             except Exception as e:
                 await websocket.send_json({"error": str(e)})
-            await asyncio.sleep(3)
+                
+        # Send initial state
+        await fetch_and_send()
+        
+        try:
+            while True:
+                # Wait for an event from either watch
+                await queue.get()
+                # Throttle slightly to avoid spamming if multiple events happen close together
+                await asyncio.sleep(0.5)
+                # Drain any other events that accumulated in that 0.5s
+                while not queue.empty():
+                    queue.get_nowait()
+                    
+                await fetch_and_send()
+        except WebSocketDisconnect:
+            print("Websocket YAML disconnected")
+        finally:
+            # Cancel watch tasks
+            dr_watch_task.cancel()
+            vs_watch_task.cancel()
+            
     except WebSocketDisconnect:
         print("Websocket YAML disconnected")
 
@@ -126,11 +170,11 @@ dyn_client = dynamic.DynamicClient(api_client.ApiClient())
 # Istio API Details
 ISTIO_GROUP = "networking.istio.io"
 ISTIO_VERSION = "v1beta1"
-NAMESPACE = os.getenv("APP_NAMESPACE", "default")
+NAMESPACE = os.getenv("APP_NAMESPACE", "ha")
 
 # Workload Configuration Globals
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID", "")
-APP_NAMESPACE = os.getenv("APP_NAMESPACE", "")
+APP_NAMESPACE = os.getenv("APP_NAMESPACE", "ha")
 APP_LABEL = os.getenv("APP_LABEL", "")
 PRIMARY_CLUSTER = os.getenv("PRIMARY_CLUSTER", "")
 
@@ -282,11 +326,7 @@ async def poll_mesh_health():
             memberships_response = await get_fleet_memberships()
             memberships = memberships_response.get('memberships', [])
             
-            health_data = []
-            for m in memberships:
-                name = m['name']
-                location = m['location']
-                
+            async def get_status(name, location):
                 process = await asyncio.create_subprocess_exec(
                     'gcloud', 'container', 'fleet', 'memberships', 'describe', name,
                     '--location', location, '--format=json',
@@ -305,11 +345,13 @@ async def poll_mesh_health():
                 else:
                     print(f"Error describing {name}: {stderr.decode()}")
                     
-                health_data.append({
+                return {
                     "name": name,
                     "location": location,
                     "status": status
-                })
+                }
+
+            health_data = await asyncio.gather(*(get_status(m['name'], m['location']) for m in memberships))
                 
             message = json.dumps({
                 "type": "health_update",
@@ -322,9 +364,75 @@ async def poll_mesh_health():
             
         await asyncio.sleep(180)
 
+async def fetch_and_broadcast_deployments(context: str):
+    global APP_NAMESPACE, APP_LABEL
+    try:
+        kubeconfig_file = os.getenv("KUBECONFIG")
+        if not kubeconfig_file and os.path.exists("kdp_kube_config"):
+            kubeconfig_file = "kdp_kube_config"
+            
+        api_client_ctx = config.new_client_from_config(config_file=kubeconfig_file, context=context)
+        dyn_client_ctx = dynamic.DynamicClient(api_client_ctx)
+        
+        apps_api = dyn_client_ctx.resources.get(api_version="v1", group="apps", kind="Deployment")
+        deps = apps_api.get(namespace=APP_NAMESPACE, label_selector=f"app={APP_LABEL}")
+        
+        deployments = []
+        for dep in deps.items:
+            labels = dep.metadata.labels
+            if hasattr(labels, 'to_dict'):
+                labels = labels.to_dict()
+            
+            deployments.append({
+                "name": dep.metadata.name,
+                "replicas": dep.spec.replicas,
+                "available_replicas": dep.status.availableReplicas if dep.status.availableReplicas else 0,
+                "labels": labels
+            })
+            
+        message = json.dumps({
+            "type": "deployments_update",
+            "cluster": context,
+            "data": deployments
+        })
+        await broadcast_message(message)
+    except Exception as e:
+        print(f"Error in fetch_and_broadcast_deployments for {context}: {e}")
+
+def start_watch_deployments(context: str, loop):
+    global APP_NAMESPACE, APP_LABEL
+    while True:
+        kubeconfig_file = os.getenv("KUBECONFIG")
+        if not kubeconfig_file and os.path.exists("kdp_kube_config"):
+            kubeconfig_file = "kdp_kube_config"
+        
+        try:
+            api_client_ctx = config.new_client_from_config(config_file=kubeconfig_file, context=context)
+            dyn_client_ctx = dynamic.DynamicClient(api_client_ctx)
+            apps_api = dyn_client_ctx.resources.get(api_version="v1", group="apps", kind="Deployment")
+            
+            print(f"Starting deployment watch for context {context}")
+            for event in apps_api.watch(namespace=APP_NAMESPACE, label_selector=f"app={APP_LABEL}"):
+                loop.call_soon_threadsafe(asyncio.create_task, fetch_and_broadcast_deployments(context))
+        except Exception as e:
+            print(f"Watch error for deployments in {context}: {e}")
+            time.sleep(5)
+
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(poll_mesh_health())
+    
+    # Start deployment watches for each cluster
+    try:
+        memberships_resp = await get_fleet_memberships()
+        memberships = memberships_resp.get('memberships', [])
+        
+        loop = asyncio.get_running_loop()
+        for m in memberships:
+            context = m['name']
+            asyncio.create_task(asyncio.to_thread(start_watch_deployments, context, loop))
+    except Exception as e:
+        print(f"Error starting deployment watches: {e}")
 
 @app.post("/api/primaryCluster")
 async def update_primary_cluster(cfg: PrimaryCluster):
@@ -386,6 +494,44 @@ async def get_canary_versions():
     except Exception as e:
         print(f"Error fetching versions: {e}")
         return {"versions": [], "error": str(e)}
+
+@app.get("/api/cluster/deployments")
+async def get_cluster_deployments(context: str):
+    global APP_NAMESPACE, APP_LABEL
+    
+    if not context:
+        raise HTTPException(status_code=400, detail="Missing context parameter")
+        
+    try:
+        kubeconfig_file = os.getenv("KUBECONFIG")
+        if not kubeconfig_file and os.path.exists("kdp_kube_config"):
+            kubeconfig_file = "kdp_kube_config"
+            
+        print(f"Fetching deployments using context: {context}, namespace: {APP_NAMESPACE}, label: app={APP_LABEL}")
+        
+        api_client_ctx = config.new_client_from_config(config_file=kubeconfig_file, context=context)
+        dyn_client_ctx = dynamic.DynamicClient(api_client_ctx)
+        
+        apps_api = dyn_client_ctx.resources.get(api_version="v1", group="apps", kind="Deployment")
+        deps = apps_api.get(namespace=APP_NAMESPACE, label_selector=f"app={APP_LABEL}")
+        
+        deployments = []
+        for dep in deps.items:
+            labels = dep.metadata.labels
+            if hasattr(labels, 'to_dict'):
+                labels = labels.to_dict()
+            
+            deployments.append({
+                "name": dep.metadata.name,
+                "replicas": dep.spec.replicas,
+                "available_replicas": dep.status.availableReplicas if dep.status.availableReplicas else 0,
+                "labels": labels
+            })
+            
+        return {"deployments": deployments}
+    except Exception as e:
+        print(f"Error fetching deployments: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 class CanarySelection(BaseModel):
     version: str

@@ -106,6 +106,10 @@
       background-color: #0b57d0;
     }
 
+    .status-dot--red {
+      background-color: #b3261e;
+    }
+
     .status-text {
       color: #444746;
       font-weight: 500;
@@ -583,7 +587,7 @@
           <span class="md-typescale-label-small" style="color: #aaaaaa; font-family: monospace;">service-whereami-logs</span>
         </div>
         <div id="terminal" class="terminal-output"
-          style="padding: 16px; font-family: monospace; font-size: 11px; color: #00ff00; overflow-y: auto; flex: 1; line-height: 1.5;">
+          style="padding: 16px; font-family: monospace; font-size: 11px; color: #d1d5db; overflow-y: auto; flex: 1; line-height: 1.5;">
           <div style="color: #888888; font-style: italic;">Waiting for traffic initiation...</div>
         </div>
       </section>
@@ -638,51 +642,17 @@
                   <span class="material-symbols-outlined" style="color: #0b57d0; font-size: 32px;">public</span>
                 </div>
                 <span class="md-typescale-label-small"
-                  style="margin-top: 8px; color: #0b57d0; font-weight: 700; background-color: #e8f0fe; padding: 2px 8px; border-radius: 4px;">Global
-                  LB</span>
+                  style="margin-top: 8px; color: #0b57d0; font-weight: 700; background-color: #e8f0fe; padding: 2px 8px; border-radius: 4px;">Multi-cluster Gateway</span>
+                <span id="gateway-mode-label" class="md-typescale-label-small"
+                  style="margin-top: 4px; color: #444746; font-style: italic;"></span>
               </div>
 
-              <!-- Cluster: Delhi -->
-              <div id="node-delhi" class="node-card" style="position: absolute; top: 40px; right: 40px; width: 200px; z-index: 20;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="material-symbols-outlined" style="color: #0b57d0;">dns</span>
-                    <span class="md-typescale-title-small" style="margin: 0; color: #1f1f1f;">Delhi Cluster</span>
-                  </div>
-                  <span id="status-delhi" class="status-dot status-dot--green" style="width: 12px; height: 12px;"></span>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                  <div style="display: flex; justify-content: space-between;" class="md-typescale-label-small">
-                    <span style="color: #444746;">Region</span>
-                    <span style="color: #1f1f1f; font-family: monospace;">asia-south2</span>
-                  </div>
-                  <md-outlined-button style="margin-top: 8px;" onclick="toggleCluster('delhi')">INJECT FAILURE</md-outlined-button>
-                </div>
-              </div>
-
-              <!-- Cluster: Mumbai -->
-              <div id="node-mumbai" class="node-card"
-                style="position: absolute; bottom: 40px; right: 40px; width: 200px; z-index: 20;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="material-symbols-outlined" style="color: #6750a4;">dns</span>
-                    <span class="md-typescale-title-small" style="margin: 0; color: #1f1f1f;">Mumbai Cluster</span>
-                  </div>
-                  <span id="status-mumbai" class="status-dot status-dot--green" style="width: 12px; height: 12px;"></span>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                  <div style="display: flex; justify-content: space-between;" class="md-typescale-label-small">
-                    <span style="color: #444746;">Region</span>
-                    <span style="color: #1f1f1f; font-family: monospace;">asia-south1</span>
-                  </div>
-                  <md-outlined-button style="margin-top: 8px;" onclick="toggleCluster('mumbai')">INJECT FAILURE</md-outlined-button>
-                </div>
+              <!-- Cluster Tiles Container (Dynamic) -->
+              <div id="cluster-tiles-container" style="position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 16px; z-index: 20; max-height: 90%; overflow-y: auto; padding-right: 10px;">
               </div>
 
               <!-- Connection Paths (SVG) -->
               <svg style="position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;" id="svg-layer">
-                <path id="path-delhi" d="" stroke="#c4c7c5" stroke-width="2" fill="none" stroke-dasharray="8,4" />
-                <path id="path-mumbai" d="" stroke="#c4c7c5" stroke-width="2" fill="none" stroke-dasharray="8,4" />
               </svg>
             </div>
 
@@ -713,7 +683,7 @@
                         <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #0b57d0;"></span>
                         </div>
                         <pre id="dr-yaml"
-                          style="margin: 0; font-family: monospace; font-size: 11px; color: #00ff00; overflow-y: auto; flex: 1; line-height: 1.5; white-space: pre-wrap;"></pre>
+                          style="margin: 0; font-family: monospace; font-size: 11px; color: #d1d5db; overflow-y: auto; flex: 1; line-height: 1.5; white-space: pre-wrap;"></pre>
                     </div>
                     <!-- Right: VirtualService -->
                     <div
@@ -724,7 +694,7 @@
                         <span style="width: 8px; height: 8px; border-radius: 50%; background-color: #b58900;"></span>
                         </div>
                         <pre id="vs-yaml"
-                          style="margin: 0; font-family: monospace; font-size: 11px; color: #00ff00; overflow-y: auto; flex: 1; line-height: 1.5; white-space: pre-wrap;"></pre>
+                          style="margin: 0; font-family: monospace; font-size: 11px; color: #d1d5db; overflow-y: auto; flex: 1; line-height: 1.5; white-space: pre-wrap;"></pre>
                     </div>
                 </div>
             </div>
@@ -749,7 +719,7 @@
               style="background-color: #e6f4ea; color: #137333; padding: 4px 8px; border-radius: 12px; font-weight: 700;">OPERATIONAL</span>
           </div>
           <div id="mesh-health-container" style="display: flex; flex-direction: column; gap: 12px;">
-            <div style="color: #444746; font-style: italic;">Loading mesh health...</div>
+            <div style="display: flex; justify-content: center; padding: 8px;"><md-circular-progress indeterminate></md-circular-progress></div>
           </div>
         </section>
       </div>
@@ -842,6 +812,131 @@
       });
     }
 
+    function renderDeployments(clusterKey, deployments) {
+      const el = document.getElementById(`deployments-${clusterKey}`);
+      if (!el) return;
+      
+      el.innerHTML = '';
+      deployments.forEach(dep => {
+        const depEl = document.createElement('div');
+        depEl.style.marginBottom = '8px';
+        depEl.style.fontSize = '11px';
+        
+        const nameEl = document.createElement('div');
+        nameEl.style.fontWeight = 'bold';
+        nameEl.textContent = dep.name;
+        
+        const replicasEl = document.createElement('div');
+        replicasEl.style.color = '#666';
+        replicasEl.textContent = `Replicas: ${dep.available_replicas}/${dep.replicas}`;
+        
+        const labelsEl = document.createElement('div');
+        labelsEl.style.display = 'flex';
+        labelsEl.style.flexWrap = 'wrap';
+        labelsEl.style.gap = '4px';
+        labelsEl.style.marginTop = '2px';
+        
+        for (const key in dep.labels) {
+          const label = document.createElement('span');
+          label.style.backgroundColor = '#e0e0e0';
+          label.style.padding = '1px 4px';
+          label.style.borderRadius = '3px';
+          label.style.fontSize = '10px';
+          label.textContent = `${key}=${dep.labels[key]}`;
+          labelsEl.appendChild(label);
+        }
+        
+        depEl.appendChild(nameEl);
+        depEl.appendChild(replicasEl);
+        depEl.appendChild(labelsEl);
+        
+        el.appendChild(depEl);
+      });
+    }
+
+    async function toggleDeployments(clusterKey) {
+      const el = document.getElementById(`deployments-${clusterKey}`);
+      if (!el) return;
+      
+      if (el.style.display === 'none') {
+        el.style.display = 'block';
+        
+        const context = document.getElementById(`label-cluster-${clusterKey}`).textContent;
+        el.innerHTML = '<div style="display: flex; justify-content: center; padding: 8px;"><md-circular-progress indeterminate></md-circular-progress></div>';
+        
+        try {
+          const response = await fetch(`/api/cluster/deployments?context=${context}`);
+          const data = await response.json();
+          
+          let hasActiveReplicas = false;
+          
+          if (data.deployments && data.deployments.length > 0) {
+            renderDeployments(clusterKey, data.deployments);
+            
+            data.deployments.forEach(dep => {
+              if (dep.available_replicas > 0) {
+                hasActiveReplicas = true;
+              }
+            });
+          } else {
+            el.innerHTML = '<div style="color: #444746; font-style: italic;">No deployments found.</div>';
+          }
+          
+          const statusEl = document.getElementById(`status-${clusterKey}`);
+          if (statusEl) {
+            if (hasActiveReplicas) {
+              statusEl.className = 'status-dot status-dot--green';
+            } else {
+              statusEl.className = 'status-dot status-dot--red';
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching deployments:", error);
+          el.innerHTML = '<div style="color: #b3261e; font-style: italic;">Error loading deployments.</div>';
+        }
+      } else {
+        el.style.display = 'none';
+      }
+      setTimeout(updatePaths, 100);
+    }
+
+    async function refreshDeployments(clusterKey, event) {
+      if (event) event.stopPropagation();
+      
+      const context = document.getElementById(`label-cluster-${clusterKey}`).textContent;
+      const statusEl = document.getElementById(`status-${clusterKey}`);
+      const deploymentsEl = document.getElementById(`deployments-${clusterKey}`);
+      
+      try {
+        const response = await fetch(`/api/cluster/deployments?context=${context}`);
+        const data = await response.json();
+        
+        let hasActiveReplicas = false;
+        
+        if (data.deployments && data.deployments.length > 0) {
+          data.deployments.forEach(dep => {
+            if (dep.available_replicas > 0) {
+              hasActiveReplicas = true;
+            }
+          });
+          
+          if (deploymentsEl && deploymentsEl.style.display !== 'none') {
+            renderDeployments(clusterKey, data.deployments);
+          }
+        }
+        
+        if (statusEl) {
+          if (hasActiveReplicas) {
+            statusEl.className = 'status-dot status-dot--green';
+          } else {
+            statusEl.className = 'status-dot status-dot--red';
+          }
+        }
+      } catch (error) {
+        console.error("Error refreshing deployments:", error);
+      }
+    }
+
     // Initialize UI
     document.addEventListener('DOMContentLoaded', () => {
       initChart();
@@ -884,12 +979,76 @@
         .then(response => response.json())
         .then(data => {
           if (data.memberships) {
+            // Clear clusters object
+            for (const key in clusters) delete clusters[key];
+            
+            const container = document.getElementById('cluster-tiles-container');
+            const svgLayer = document.getElementById('svg-layer');
+            
+            if (container) container.innerHTML = '';
+            // Clear SVG paths if any
+            if (svgLayer) svgLayer.innerHTML = '';
+
             data.memberships.forEach(m => {
               const option = document.createElement('option');
               option.value = m.name;
               option.textContent = `${m.name} (${m.location})`;
               clusterSelect.appendChild(option);
+              
+              // Update clusters object
+              clusters[m.name] = {
+                name: m.name,
+                region: m.location,
+                healthy: true,
+                requests: 0,
+                element: `node-${m.name}`,
+                statusEl: `status-${m.name}`,
+                pathEl: `path-${m.name}`
+              };
+              
+              // Create tile
+              const card = document.createElement('div');
+              card.id = `node-${m.name}`;
+              card.className = 'node-card';
+              card.style.width = '200px';
+              
+              card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <div style="display: flex; align-items: center; gap: 8px; cursor: pointer;" onclick="toggleDeployments('${m.name}')">
+                    <span class="material-symbols-outlined" style="color: #0b57d0;">dns</span>
+                    <span id="label-cluster-${m.name}" class="md-typescale-title-small" style="margin: 0; color: #1f1f1f;">${m.name}</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-outlined" style="font-size: 16px; cursor: pointer;" onclick="refreshDeployments('${m.name}', event)">refresh</span>
+                    <span id="status-${m.name}" class="status-dot status-dot--green" style="width: 12px; height: 12px;"></span>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <div style="display: flex; justify-content: space-between;" class="md-typescale-label-small">
+                    <span style="color: #444746;">Region</span>
+                    <span id="region-${m.name}" style="color: #1f1f1f; font-family: monospace;">${m.location}</span>
+                  </div>
+                  <md-outlined-button style="margin-top: 8px;" onclick="toggleCluster('${m.name}')">INJECT FAILURE</md-outlined-button>
+                </div>
+                <div id="deployments-${m.name}" style="display: none; margin-top: 12px; border-top: 1px solid #c4c7c5; padding-top: 8px;">
+                  <div style="color: #444746; font-style: italic;">Loading deployments...</div>
+                </div>
+              `;
+              
+              if (container) container.appendChild(card);
+              
+              // Create SVG path
+              const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              path.id = `path-${m.name}`;
+              path.setAttribute('d', '');
+              path.setAttribute('stroke', '#c4c7c5');
+              path.setAttribute('stroke-width', '2');
+              path.setAttribute('fill', 'none');
+              path.setAttribute('stroke-dasharray', '8,4');
+              if (svgLayer) svgLayer.appendChild(path);
             });
+            
+            setTimeout(updatePaths, 100);
           }
         })
         .catch(err => console.error("Error fetching fleet memberships:", err));
@@ -934,6 +1093,23 @@
           const data = JSON.parse(event.data);
           if (data.type === 'health_update') {
             updateMeshHealth(data.data);
+          } else if (data.type === 'deployments_update') {
+            const clusterKey = data.cluster;
+            const deployments = data.data;
+            
+            renderDeployments(clusterKey, deployments);
+            
+            let hasActiveReplicas = false;
+            deployments.forEach(dep => {
+              if (dep.available_replicas > 0) {
+                hasActiveReplicas = true;
+              }
+            });
+            
+            const statusEl = document.getElementById(`status-${clusterKey}`);
+            if (statusEl) {
+              statusEl.className = `status-dot status-dot--${hasActiveReplicas ? 'green' : 'red'}`;
+            }
           } else {
             logTerminal(event.data, 'green');
           }
@@ -996,8 +1172,10 @@
       const startX = originRect.right - parentRect.left;
       const startY = originRect.top + (originRect.height / 2) - parentRect.top;
 
-      ['delhi', 'mumbai'].forEach(key => {
-        const nodeRect = document.getElementById(clusters[key].element).getBoundingClientRect();
+      Object.keys(clusters).forEach(key => {
+        const nodeEl = document.getElementById(clusters[key].element);
+        if (!nodeEl) return;
+        const nodeRect = nodeEl.getBoundingClientRect();
         const endX = nodeRect.left - parentRect.left;
         const endY = nodeRect.top + (nodeRect.height / 2) - parentRect.top;
 
@@ -1008,7 +1186,8 @@
         const cp2Y = endY;
 
         const path = `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`;
-        document.getElementById(clusters[key].pathEl).setAttribute('d', path);
+        const pathEl = document.getElementById(clusters[key].pathEl);
+        if (pathEl) pathEl.setAttribute('d', path);
       });
     }
 
@@ -1021,7 +1200,7 @@
         if (view === 'graphic') {
         if(secGraphic) secGraphic.classList.remove('hidden');
         if(secYaml) secYaml.classList.add('hidden');
-        cleanupYamlSocket();
+        // Keep WebSocket connected to receive updates in Graphic view
       } else {
         if(secYaml) secYaml.classList.remove('hidden');
         if(secGraphic) secGraphic.classList.add('hidden');
@@ -1036,7 +1215,7 @@
       if (specIndex !== -1) {
          const preSpec = lines.slice(0, specIndex).join('\n');
          const specPart = lines.slice(specIndex).join('\n');
-         return `${preSpec}\n<span class="text-amber-300 font-bold">${specPart}</span>`;
+         return `${preSpec}\n<span style="color: #fcd34d; font-weight: bold;">${specPart}</span>`;
       }
       return yamlText;
     }
@@ -1069,6 +1248,9 @@
           }
           if (data.vs && document.getElementById('vs-yaml')) {
               document.getElementById('vs-yaml').innerHTML = highlightSpec(data.vs);
+          }
+          if (data.dr_data) {
+              updateGatewayMode(data.dr_data);
           }
         } catch (e) {
            console.error("Failed decoding socket package", e);
@@ -1128,7 +1310,9 @@
 
     // Fetch contexts on page load
     document.addEventListener("DOMContentLoaded", () => {
-       fetchContexts();
+       fetchContexts().then(() => {
+          initYamlSocket();
+       });
     });
 
         // UI State
@@ -1137,6 +1321,7 @@
         function toggleCard(id) {
           const card = document.getElementById(id);
           card.classList.toggle('collapsible-card--expanded');
+          setTimeout(updatePaths, 100);
         }
 
         let canaryVersionsLoaded = false;
@@ -1152,7 +1337,7 @@
 
         async function fetchCanaryVersions() {
           const container = document.getElementById('canary-versions-container');
-          container.innerHTML = '<span class="md-typescale-body-small" style="color: #444746; font-style: italic;">Loading versions...</span>';
+          container.innerHTML = '<div style="display: flex; justify-content: center; padding: 8px;"><md-circular-progress indeterminate></md-circular-progress></div>';
           
           try {
             const response = await fetch('/api/canary/versions');
@@ -1500,6 +1685,47 @@
         }
     }
 
+    function updateGatewayMode(drData) {
+      const modeLabel = document.getElementById('gateway-mode-label');
+      if (!modeLabel) return;
+
+      const setting = drData.spec?.trafficPolicy?.loadBalancer?.localityLbSetting;
+
+      const spec = drData.spec;
+      if (!spec) {
+        modeLabel.innerText = "";
+        return;
+      }
+      const trafficPolicy = spec.trafficPolicy;
+      if (!trafficPolicy) {
+        modeLabel.innerText = "";
+        return;
+      }
+      const loadBalancer = trafficPolicy.loadBalancer;
+      if (!loadBalancer) {
+        modeLabel.innerText = "";
+        return;
+      }
+      const localityLbSetting = loadBalancer.localityLbSetting;
+      if (!localityLbSetting) {
+        modeLabel.innerText = "";
+        return;
+      }
+
+      if (localityLbSetting.distribute) {
+        modeLabel.innerText = "Distribute Mode";
+        window.currentTrafficMode = "distribute";
+        window.trafficDistribution = localityLbSetting.distribute;
+      } else if (localityLbSetting.failover) {
+        modeLabel.innerText = "Failover Mode";
+        window.currentTrafficMode = "failover";
+        window.trafficFailover = localityLbSetting.failover;
+      } else {
+        modeLabel.innerText = "";
+        window.currentTrafficMode = null;
+      }
+    }
+
     async function startTraffic() {
       if (isTrafficRunning) return;
       isTrafficRunning = true;
@@ -1532,6 +1758,13 @@
         });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         logTerminal(`[API SUCCESS] Traffic generation started for ${serviceName}.`, 'blue');
+
+        // Start traffic animation interval
+        clearInterval(trafficInterval);
+        trafficInterval = setInterval(() => {
+          if (!isTrafficRunning) return;
+          processRequest();
+        }, 1000 / rps);
 
         // Auto-stop in UI after duration ends
         setTimeout(() => {
@@ -1567,20 +1800,39 @@
       let target = null;
       const rand = Math.random() * 100;
 
-      // Decision Engine based on APPLIED config (simulating Istio Data Plane behavior)
-      if (appliedConfig.failover_enabled) {
-        // Assume Delhi is primary (Local)
-        if (clusters.delhi.healthy) {
-          target = (rand < (100 - appliedConfig.weight_mumbai)) ? 'delhi' : 'mumbai';
+      const keys = Object.keys(clusters);
+      const delhiKey = keys.find(k => clusters[k].region === 'asia-south2') || keys[0] || 'delhi';
+      const mumbaiKey = keys.find(k => clusters[k].region === 'asia-south1') || keys[1] || 'mumbai';
 
-          if (target === 'mumbai' && !clusters.mumbai.healthy) {
-            target = 'delhi';
+      // Decision Engine based on REAL Istio config if available
+      if (window.currentTrafficMode === "distribute" && window.trafficDistribution) {
+        const to = window.trafficDistribution[0].to;
+        let sum = 0;
+        for (const [dest, weight] of Object.entries(to)) {
+          sum += weight;
+          if (rand <= sum) {
+            const region = dest.split('/')[0];
+            target = Object.keys(clusters).find(key => clusters[key].region === region);
+            break;
+          }
+        }
+        // Fallback if target not found due to region mismatch
+        if (!target) target = delhiKey;
+      }
+      // Decision Engine based on APPLIED config (simulating Istio Data Plane behavior)
+      else if (appliedConfig.failover_enabled) {
+        // Assume Delhi is primary (Local)
+        if (clusters[delhiKey] && clusters[delhiKey].healthy) {
+          target = (rand < (100 - appliedConfig.weight_mumbai)) ? delhiKey : mumbaiKey;
+
+          if (target === mumbaiKey && clusters[mumbaiKey] && !clusters[mumbaiKey].healthy) {
+            target = delhiKey;
             logTerminal(`[Failover Activated] Mumbai down. Rerouted to Delhi.`, 'yellow');
           }
         } else {
           // Local (Delhi) is down
-          if (clusters.mumbai.healthy) {
-            target = 'mumbai';
+          if (clusters[mumbaiKey] && clusters[mumbaiKey].healthy) {
+            target = mumbaiKey;
           } else {
             // Both down
             logTerminal(`[ERROR] 503 Service Unavailable. No healthy upstreams.`, 'red');
@@ -1590,13 +1842,13 @@
         }
       } else {
         // Pure Weighted Routing (No failover logic)
-        target = (rand < (100 - appliedConfig.weight_mumbai)) ? 'delhi' : 'mumbai';
+        target = (rand < (100 - appliedConfig.weight_mumbai)) ? delhiKey : mumbaiKey;
 
-        if (!clusters[target].healthy) {
+        if (clusters[target] && !clusters[target].healthy) {
           if (appliedConfig.outlier_detection_enabled) {
             // Mock retry logic / immediate ejection
-            const alternate = target === 'delhi' ? 'mumbai' : 'delhi';
-            if (clusters[alternate].healthy) {
+            const alternate = target === delhiKey ? mumbaiKey : delhiKey;
+            if (clusters[alternate] && clusters[alternate].healthy) {
               logTerminal(`[Outlier] Endpoint ${target} ejected 5xx. Retrying ${alternate}...`, 'orange');
               target = alternate;
             } else {
@@ -1613,9 +1865,8 @@
       }
 
       // Success
-      clusters[target].requests++;
+      if (clusters[target]) clusters[target].requests++;
       animatePacket(target);
-      logTerminal(`HTTP 200: Served by ${clusters[target].name} (${clusters[target].region})`, 'green');
       updateCharts();
     }
 
@@ -1639,7 +1890,10 @@
       if (type === 'error') {
         dot.style.backgroundColor = '#ef4444'; // Red
       } else {
-        dot.style.backgroundColor = type === 'delhi' ? '#4285F4' : '#9333ea'; // Blue / Purple
+        const keys = Object.keys(clusters);
+        const index = keys.indexOf(type);
+        const colors = ['#4285F4', '#9333ea', '#34a853', '#fbbc05'];
+        dot.style.backgroundColor = colors[index % colors.length] || '#4285F4';
       }
 
       container.appendChild(dot);
@@ -1666,20 +1920,24 @@
       const term = document.getElementById('terminal');
       const div = document.createElement('div');
 
-      let textColor = 'text-green-400';
-      if (color === 'red') textColor = 'text-red-400';
-      if (color === 'yellow') textColor = 'text-yellow-400';
-      if (color === 'blue') textColor = 'text-blue-400';
-      if (color === 'orange') textColor = 'text-orange-500';
-      if (color === 'cyan') textColor = 'text-cyan-400';
-      if (color === 'slate') textColor = 'text-slate-400';
+      let textColor = '#4ade80'; // green-400
+      if (color === 'red') textColor = '#f87171'; // red-400
+      if (color === 'yellow') textColor = '#facc15'; // yellow-400
+      if (color === 'blue') textColor = '#60a5fa'; // blue-400
+      if (color === 'orange') textColor = '#f97316'; // orange-500
+      if (color === 'cyan') textColor = '#22d3ee'; // cyan-400
+      if (color === 'slate') textColor = '#94a3b8'; // slate-400
+      
+      const timeColor = '#64748b'; // slate-500
 
       const serviceName = document.getElementById('service-name').value || 'app.global';
-      // If it's a green message, we don't need the $ curl prefix
+      
+      const timeStr = `[${new Date().toLocaleTimeString()}]`;
+      
       if (color === 'green') {
-        div.innerHTML = `<span class="text-slate-500">[${new Date().toLocaleTimeString()}]</span> <span class="pl-4 ${textColor}">${msg}</span>`;
+        div.innerHTML = `<span style="color: ${timeColor}">${timeStr}</span> <span style="color: ${textColor}; padding-left: 16px;">${msg}</span>`;
       } else {
-        div.innerHTML = `<span class="text-slate-500">[${new Date().toLocaleTimeString()}]</span> <span class="${textColor}">$ curl ${serviceName}</span><br><span class="pl-4 ${textColor}">${msg}</span>`;
+        div.innerHTML = `<span style="color: ${timeColor}">${timeStr}</span> <span style="color: ${textColor}">${msg}</span>`;
       }
 
       term.prepend(div);
@@ -1723,10 +1981,23 @@
 
     // Data Updates
     function updateCharts() {
-      // Only update if there's actual data to prevent drawing 0/0 charts weirdly
-      if (clusters.delhi.requests > 0 || clusters.mumbai.requests > 0) {
-        trafficChart.data.datasets[0].data = [clusters.delhi.requests, clusters.mumbai.requests];
+      if (window.currentTrafficMode === "distribute" && window.trafficDistribution) {
+        const to = window.trafficDistribution[0].to;
+        let delhiWeight = 0;
+        let mumbaiWeight = 0;
+        for (const [dest, weight] of Object.entries(to)) {
+          const region = dest.split('/')[0];
+          if (region === 'asia-south2') delhiWeight = weight;
+          if (region === 'asia-south1') mumbaiWeight = weight;
+        }
+        trafficChart.data.datasets[0].data = [delhiWeight, mumbaiWeight];
         trafficChart.update();
+      } else {
+        // Only update if there's actual data to prevent drawing 0/0 charts weirdly
+        if (clusters.delhi.requests > 0 || clusters.mumbai.requests > 0) {
+          trafficChart.data.datasets[0].data = [clusters.delhi.requests, clusters.mumbai.requests];
+          trafficChart.update();
+        }
       }
     }
 
