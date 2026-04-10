@@ -222,7 +222,7 @@ async def generate_traffic_loop(service_url: str, rps: int, duration: int, featu
                         data = json.loads(body)
                         return f"JSON Response: {json.dumps(data)}"
                     except json.JSONDecodeError:
-                        return f"Response: {body}"
+                        return f"{body}"
                         
             msg = await asyncio.to_thread(fetch)
             if msg:
@@ -230,7 +230,7 @@ async def generate_traffic_loop(service_url: str, rps: int, duration: int, featu
                 await broadcast_message(msg)
         except Exception as e:
             # We expect some errors if the service is down (e.g., 503) during our chaos test
-            pass
+            await broadcast_message(f"Error: {str(e)}")
         await asyncio.sleep(delay)
 
 @app.get("/api/contexts")
@@ -408,11 +408,12 @@ def start_watch_deployments(context: str, loop):
         
         try:
             api_client_ctx = config.new_client_from_config(config_file=kubeconfig_file, context=context)
-            dyn_client_ctx = dynamic.DynamicClient(api_client_ctx)
-            apps_api = dyn_client_ctx.resources.get(api_version="v1", group="apps", kind="Deployment")
+            from kubernetes.client import AppsV1Api
+            apps_api = AppsV1Api(api_client_ctx)
             
+            watcher = watch.Watch()
             print(f"Starting deployment watch for context {context}")
-            for event in apps_api.watch(namespace=APP_NAMESPACE, label_selector=f"app={APP_LABEL}"):
+            for event in watcher.stream(apps_api.list_namespaced_deployment, namespace=APP_NAMESPACE, label_selector=f"app={APP_LABEL}"):
                 loop.call_soon_threadsafe(asyncio.create_task, fetch_and_broadcast_deployments(context))
         except Exception as e:
             print(f"Watch error for deployments in {context}: {e}")
@@ -531,6 +532,45 @@ async def get_cluster_deployments(context: str):
         return {"deployments": deployments}
     except Exception as e:
         print(f"Error fetching deployments: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class ScaleConfig(BaseModel):
+    context: str
+    replicas: int
+
+@app.post("/api/cluster/scale")
+async def scale_cluster_deployments(cfg: ScaleConfig):
+    global APP_NAMESPACE, APP_LABEL
+    
+    if not cfg.context:
+        raise HTTPException(status_code=400, detail="Missing context parameter")
+        
+    try:
+        kubeconfig_file = os.getenv("KUBECONFIG")
+        if not kubeconfig_file and os.path.exists("kdp_kube_config"):
+            kubeconfig_file = "kdp_kube_config"
+            
+        print(f"Scaling deployments in context: {cfg.context}, namespace: {APP_NAMESPACE}, label: app={APP_LABEL} to {cfg.replicas}")
+        
+        api_client_ctx = config.new_client_from_config(config_file=kubeconfig_file, context=cfg.context)
+        dyn_client_ctx = dynamic.DynamicClient(api_client_ctx)
+        
+        apps_api = dyn_client_ctx.resources.get(api_version="v1", group="apps", kind="Deployment")
+        deps = apps_api.get(namespace=APP_NAMESPACE, label_selector=f"app={APP_LABEL}")
+        
+        for dep in deps.items:
+            dep_name = dep.metadata.name
+            patch_body = {
+                "spec": {
+                    "replicas": cfg.replicas
+                }
+            }
+            apps_api.patch(name=dep_name, namespace=APP_NAMESPACE, body=patch_body)
+            print(f"Scaled {dep_name} to {cfg.replicas}")
+            
+        return {"status": "success", "message": f"Scaled deployments to {cfg.replicas}"}
+    except Exception as e:
+        print(f"Error scaling deployments: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 class CanarySelection(BaseModel):

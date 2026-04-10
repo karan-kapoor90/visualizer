@@ -117,7 +117,7 @@
     }
 
     .main-layout {
-      max-width: 1400px;
+      max-width: 1600px;
       margin: 0 auto;
       padding: 24px;
       display: grid;
@@ -134,7 +134,23 @@
 
     @media (min-width: 1024px) {
       .sidebar {
-        grid-column: span 4;
+        grid-column: span 3;
+      }
+    }
+
+    .intro-column, .outcome-column {
+      grid-column: span 12;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    @media (min-width: 1024px) {
+      .intro-column {
+        grid-column: span 2;
+      }
+      .outcome-column {
+        grid-column: span 2;
       }
     }
 
@@ -276,7 +292,7 @@
 
     @media (min-width: 1024px) {
       .main-content {
-        grid-column: span 8;
+        grid-column: span 5;
       }
     }
 
@@ -387,7 +403,7 @@
       <span class="material-symbols-outlined" style="color: #0b57d0; font-size: 24px;">hub</span>
       <h1 class="md-typescale-title-large top-app-bar__title">Cloud Service Mesh (CSM) Visualizer</h1>
     </div>
-    <div class="top-app-bar__section" style="gap: 24px;">
+    <!-- <div class="top-app-bar__section" style="gap: 24px;">
       <div class="status-item">
         <span class="status-dot status-dot--green"></span>
         <span class="md-typescale-label-medium status-text">VPC: global-vpc</span>
@@ -396,10 +412,64 @@
         <span class="status-dot status-dot--blue"></span>
         <span class="md-typescale-label-medium status-text">Mesh: gke-mesh</span>
       </div>
-    </div>
+    </div> -->
   </header>
 
   <main class="main-layout">
+
+    <!-- Intro Column -->
+    <div class="intro-column">
+      <!-- Problem Card -->
+      <section class="m3-card">
+        <div class="m3-card__header">
+          <h2 class="md-typescale-label-large m3-card__title">Problem</h2>
+          <span class="material-symbols-outlined" style="color: #b3261e;">warning</span>
+        </div>
+        <p class="md-typescale-body-medium" style="color: #444746; margin: 0; font-weight: 500;">
+          Limitations of traditional infrastructure Disaster Recovery:
+        </p>
+        <ul class="md-typescale-body-small" style="color: #444746; padding-left: 20px; margin: 8px 0 0 0; line-height: 1.6;">
+          <li><strong>DNS-Based Failover:</strong> Relies heavily on TTL expiration, taking minutes or hours to switch from DC to DR.</li>
+          <li><strong>Weakest Link SLA:</strong> Application outward availability gates at the lowest common SLA across backend dependencies.</li>
+          <li><strong>Unreliable RTO:</strong> Prolonged convergence durations disrupts mission-critical parameters.</li>
+        </ul>
+      </section>
+
+      <!-- Solution Card -->
+      <section class="m3-card">
+        <div class="m3-card__header">
+          <h2 class="md-typescale-label-large m3-card__title">Solution</h2>
+          <span class="material-symbols-outlined" style="color: #34a853;">lightbulb</span>
+        </div>
+        <p class="md-typescale-body-medium" style="color: #444746; margin: 0; font-weight: 500;">
+          How Cloud Service Mesh (CSM) solves this:
+        </p>
+        <ul class="md-typescale-body-small" style="color: #444746; padding-left: 20px; margin: 8px 0 0 0; line-height: 1.6;">
+          <li><strong>Sub-Second Resiliency:</strong> Immediate, event-driven traffic steering around outage vectors without DNS delays.</li>
+          <li><strong>Dramatically Reduced RTO:</strong> Instant granular switchovers reduce Recovery Time Objectives.</li>
+          <li><strong>Improved Outward SLA:</strong> High availability mechanisms insulate outward SLA from stack dependencies.</li>
+          <li><strong>Partial Failover Support:</strong> Powered by Google's backbone and global VPC, fail over app tiers to DR while data tiers serve from Primary. This maintains "degraded uptime" and reduces outward customer impact while DR pre-conditions are verified.</li>
+        </ul>
+      </section>
+
+      <!-- DORA Metrics Card -->
+      <section class="m3-card">
+        <div class="m3-card__header">
+          <h2 class="md-typescale-label-large m3-card__title">DORA Metrics</h2>
+          <span class="material-symbols-outlined" style="color: #0b57d0;">analytics</span>
+        </div>
+        <p class="md-typescale-body-medium" style="color: #444746; margin: 0; font-weight: 500;">
+          Standard metrics to measure software delivery and operational performance:
+        </p>
+        <ul class="md-typescale-body-small" style="color: #444746; padding-left: 20px; margin: 8px 0 0 0; line-height: 1.6;">
+          <li><strong>Deployment Frequency (DF):</strong> Frequency of successful production releases. <em>Goal: Higher agility.</em></li>
+          <li><strong>Lead Time for Changes (LTFC):</strong> Time from commit to production. <em>Goal: Faster feedback.</em></li>
+          <li><strong>Change Failure Rate (CFR):</strong> % of releases requiring hotfixes/remedies. <em>Goal: Higher stability.</em></li>
+          <li><strong>Time to Restore Service (MTTR):</strong> Duration to recover from production failure. <em>Goal: Higher resiliency.</em></li>
+          <li><strong>Operational Reliability:</strong> Availability, latency, and outward efficiency. <em>Goal: Insulation of outward SLAs.</em></li>
+        </ul>
+      </section>
+    </div>
 
     <!-- Sidebar: Controls -->
     <div class="sidebar">
@@ -542,7 +612,7 @@
                     
 
                     
-                    <p id="canary-note" class="md-typescale-body-small" style="color: #444746; margin: 12px 0 4px 0;">* You must select at least 2 versions and the total percentage should be 100% before applying canary.</p>
+                    <p id="canary-note" class="md-typescale-body-small" style="color: #444746; margin: 12px 0 4px 0;">* Select between deployments that do not have the featureFlag label. You must select at least 2 versions and the total percentage should be 100% before applying canary.</p>
                     <md-filled-button id="apply-canary-btn" style="margin-top: 8px;" onclick="applyCanary()" disabled>Apply Canary</md-filled-button>
                   </div>
                 </div>
@@ -603,9 +673,8 @@
         <div style="position: relative; z-index: 10; display: flex; flex-direction: column; height: 100%;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
             <div>
-              <h2 class="md-typescale-headline-small" style="margin: 0; color: #1f1f1f;">Mesh Connectivity Topology</h2>
-              <p class="md-typescale-body-small" style="margin: 4px 0 0 0; color: #444746;">Real-time failover and outlier
-                visualization</p>
+              <h2 class="md-typescale-headline-small" style="margin: 0; color: #1f1f1f;">Mesh Topology</h2>
+              <p class="md-typescale-body-small" style="margin: 4px 0 0 0; color: #444746;">Real-time failover visualization</p>
             </div>
             <div style="display: flex; align-items: center; gap: 16px;">
               <!-- Graphic/YAML Switch Toggle -->
@@ -725,6 +794,53 @@
       </div>
 
     </div>
+
+    <!-- Outcome Column -->
+    <div class="outcome-column">
+      <!-- CFR Card -->
+      <section class="m3-card">
+        <div class="m3-card__header">
+          <h2 class="md-typescale-label-large m3-card__title">Improved Change Failure Rate (CFR)</h2>
+          <span class="material-symbols-outlined" style="color: #0b57d0;">trending_down</span>
+        </div>
+        <p class="md-typescale-body-medium" style="color: #444746; margin: 0;">
+          Canary deployments and Feature Flags minimize the blast radius of new releases. Features can be safely tested on fractions of live traffic, and problematic configurations can be toggled off instantly without requiring rollbacks or emergency deployments.
+        </p>
+      </section>
+
+      <!-- MTTR Card -->
+      <section class="m3-card">
+        <div class="m3-card__header">
+          <h2 class="md-typescale-label-large m3-card__title">Reduced Time to Restore Service (MTTR)</h2>
+          <span class="material-symbols-outlined" style="color: #0b57d0;">healing</span>
+        </div>
+        <p class="md-typescale-body-medium" style="color: #444746; margin: 0; font-weight: 500;">
+          MTTR is broken down into distinct phases:
+        </p>
+        <ul class="md-typescale-body-small" style="color: #444746; padding-left: 20px; margin: 8px 0; line-height: 1.6;">
+          <li><strong>MTTD:</strong> Mean Time to Detect the incident.</li>
+          <li><strong>MTTA:</strong> Mean Time to Acknowledge the alert.</li>
+          <li><strong>Diagnosis / Investigation:</strong> Isolating the root cause of the failure.</li>
+          <li><strong>Repair / Mitigation:</strong> Restoring service by routing traffic away from the outage.</li>
+          <li><strong>Recovery / Verification:</strong> Validating that the system has stabilized.</li>
+        </ul>
+        <p class="md-typescale-body-small" style="color: #444746; margin: 0; font-style: italic;">
+          Cloud Service Mesh reduces <strong>Repair / Mitigation time</strong> from minutes to milliseconds using Automatic Failover and Partial Recovery configurations.
+        </p>
+      </section>
+
+      <!-- Reliability Card -->
+      <section class="m3-card">
+        <div class="m3-card__header">
+          <h2 class="md-typescale-label-large m3-card__title">Improved Operational Reliability</h2>
+          <span class="material-symbols-outlined" style="color: #0b57d0;">shield</span>
+        </div>
+        <p class="md-typescale-body-medium" style="color: #444746; margin: 0;">
+          CSM improves availability by enabling the application tier to failover in a matter of milliseconds. While cross-region routing may introduce slight latencies, it ensures uninterrupted availability for critical workloads that prioritize uptime over latency.
+        </p>
+      </section>
+    </div>
+
   </main>
 
   <script>
@@ -813,8 +929,34 @@
     }
 
     function renderDeployments(clusterKey, deployments) {
-      const el = document.getElementById(`deployments-${clusterKey}`);
+      const el = document.getElementById(`deployments-list-${clusterKey}`);
       if (!el) return;
+      
+      if (clusters[clusterKey]) {
+        clusters[clusterKey].deployments = deployments;
+      }
+      
+      // Update button style based on replicas!
+      let hasActiveReplicas = false;
+      deployments.forEach(dep => {
+        if (dep.available_replicas > 0) hasActiveReplicas = true;
+      });
+      
+      const btnContainer = document.getElementById(`toggle-btn-container-${clusterKey}`);
+      if (btnContainer) {
+        const isZero = !hasActiveReplicas;
+        const currentBtn = btnContainer.querySelector('md-outlined-button, md-elevated-button');
+        const expectedTag = isZero ? 'MD-OUTLINED-BUTTON' : 'MD-ELEVATED-BUTTON';
+        if (!currentBtn || currentBtn.tagName !== expectedTag) {
+          const newBtn = document.createElement(isZero ? 'md-outlined-button' : 'md-elevated-button');
+          newBtn.style.marginTop = '8px';
+          newBtn.onclick = () => toggleCluster(clusterKey);
+          newBtn.textContent = 'TOGGLE FAILURE';
+          
+          btnContainer.innerHTML = '';
+          btnContainer.appendChild(newBtn);
+        }
+      }
       
       el.innerHTML = '';
       deployments.forEach(dep => {
@@ -862,7 +1004,10 @@
         el.style.display = 'block';
         
         const context = document.getElementById(`label-cluster-${clusterKey}`).textContent;
-        el.innerHTML = '<div style="display: flex; justify-content: center; padding: 8px;"><md-circular-progress indeterminate></md-circular-progress></div>';
+        const listEl = document.getElementById(`deployments-list-${clusterKey}`);
+        if (listEl) {
+          listEl.innerHTML = '<div style="display: flex; justify-content: center; padding: 8px;"><md-circular-progress indeterminate></md-circular-progress></div>';
+        }
         
         try {
           const response = await fetch(`/api/cluster/deployments?context=${context}`);
@@ -879,7 +1024,10 @@
               }
             });
           } else {
-            el.innerHTML = '<div style="color: #444746; font-style: italic;">No deployments found.</div>';
+            const listEl = document.getElementById(`deployments-list-${clusterKey}`);
+            if (listEl) {
+              listEl.innerHTML = '<div style="color: #444746; font-style: italic;">No deployments found.</div>';
+            }
           }
           
           const statusEl = document.getElementById(`status-${clusterKey}`);
@@ -1028,10 +1176,14 @@
                     <span style="color: #444746;">Region</span>
                     <span id="region-${m.name}" style="color: #1f1f1f; font-family: monospace;">${m.location}</span>
                   </div>
-                  <md-outlined-button style="margin-top: 8px;" onclick="toggleCluster('${m.name}')">INJECT FAILURE</md-outlined-button>
                 </div>
                 <div id="deployments-${m.name}" style="display: none; margin-top: 12px; border-top: 1px solid #c4c7c5; padding-top: 8px;">
-                  <div style="color: #444746; font-style: italic;">Loading deployments...</div>
+                  <div id="toggle-btn-container-${m.name}" style="margin-bottom: 8px;">
+                    <md-outlined-button style="margin-top: 8px;" onclick="toggleCluster('${m.name}')">TOGGLE FAILURE</md-outlined-button>
+                  </div>
+                  <div id="deployments-list-${m.name}">
+                    <div style="color: #444746; font-style: italic;">Loading deployments...</div>
+                  </div>
                 </div>
               `;
               
@@ -1110,11 +1262,57 @@
             if (statusEl) {
               statusEl.className = `status-dot status-dot--${hasActiveReplicas ? 'green' : 'red'}`;
             }
+          } else if (data.cluster) {
+            const clusterName = data.cluster;
+            logTerminal(clusterName, 'green');
+            if (window.currentTrafficMode === 'failover') {
+              let targetKey = null;
+              if (clusters[clusterName]) {
+                targetKey = clusterName;
+              } else {
+                for (const k in clusters) {
+                  if (clusterName.includes(k) || k.includes(clusterName)) {
+                    targetKey = k;
+                    break;
+                  }
+                }
+              }
+              
+              if (targetKey && clusters[targetKey]) {
+                clusters[targetKey].requests++;
+                animatePacket(targetKey);
+                updateCharts();
+              }
+            }
           } else {
             logTerminal(event.data, 'green');
           }
         } catch (e) {
-          logTerminal(event.data, 'green');
+          const clusterName = event.data.trim();
+          logTerminal(clusterName, 'green');
+          if (window.currentTrafficMode === 'failover') {
+            if (clusterName.startsWith('Error')) {
+              animatePacket('error');
+            } else {
+              let targetKey = null;
+              if (clusters[clusterName]) {
+                targetKey = clusterName;
+              } else {
+                for (const k in clusters) {
+                  if (clusterName.includes(k) || k.includes(clusterName)) {
+                    targetKey = k;
+                    break;
+                  }
+                }
+              }
+              
+              if (targetKey && clusters[targetKey]) {
+                clusters[targetKey].requests++;
+                animatePacket(targetKey);
+                updateCharts();
+              }
+            }
+          }
         }
       };
 
@@ -1797,6 +1995,8 @@
     }
 
     function processRequest() {
+      if (window.currentTrafficMode === 'failover') return;
+      
       let target = null;
       const rand = Math.random() * 100;
 
@@ -1819,26 +2019,24 @@
         // Fallback if target not found due to region mismatch
         if (!target) target = delhiKey;
       }
-      // Decision Engine based on APPLIED config (simulating Istio Data Plane behavior)
-      else if (appliedConfig.failover_enabled) {
-        // Assume Delhi is primary (Local)
-        if (clusters[delhiKey] && clusters[delhiKey].healthy) {
-          target = (rand < (100 - appliedConfig.weight_mumbai)) ? delhiKey : mumbaiKey;
-
-          if (target === mumbaiKey && clusters[mumbaiKey] && !clusters[mumbaiKey].healthy) {
-            target = delhiKey;
-            logTerminal(`[Failover Activated] Mumbai down. Rerouted to Delhi.`, 'yellow');
-          }
+      // Decision Engine based on ACTUAL Failover config
+      else if (window.currentTrafficMode === "failover" && window.trafficFailover) {
+        const failoverSetting = window.trafficFailover[0];
+        const fromRegion = failoverSetting.from;
+        const toRegion = failoverSetting.to;
+        
+        const fromClusterKey = Object.keys(clusters).find(key => clusters[key].region === fromRegion);
+        const toClusterKey = Object.keys(clusters).find(key => clusters[key].region === toRegion);
+        
+        if (fromClusterKey && clusters[fromClusterKey].healthy) {
+          target = fromClusterKey;
+        } else if (toClusterKey && clusters[toClusterKey].healthy) {
+          target = toClusterKey;
+          logTerminal(`[Failover] Primary ${fromRegion} down. Rerouted to ${toRegion}.`, 'yellow');
         } else {
-          // Local (Delhi) is down
-          if (clusters[mumbaiKey] && clusters[mumbaiKey].healthy) {
-            target = mumbaiKey;
-          } else {
-            // Both down
-            logTerminal(`[ERROR] 503 Service Unavailable. No healthy upstreams.`, 'red');
-            animatePacket('error');
-            return;
-          }
+          logTerminal(`[ERROR] 503 Service Unavailable. No healthy upstreams.`, 'red');
+          animatePacket('error');
+          return;
         }
       } else {
         // Pure Weighted Routing (No failover logic)
@@ -1946,58 +2144,105 @@
 
     // Cluster Control (Fault Injection)
     function toggleCluster(key) {
-      clusters[key].healthy = !clusters[key].healthy;
-      const card = document.getElementById(clusters[key].element);
-      const statusIndicator = document.getElementById(clusters[key].statusEl);
-      const healthText = document.getElementById(`health-text-${key}`);
-      const meshBadge = document.getElementById('mesh-status-badge');
-
-      if (clusters[key].healthy) {
-        card.classList.remove('failed');
-        statusIndicator.className = 'w-3 h-3 rounded-full bg-green-500 pulse-green';
-        healthText.textContent = 'HEALTHY';
-        healthText.className = 'text-xs text-green-600 font-bold';
-        logTerminal(`[System Event] Service restored in ${clusters[key].name}.`, 'green');
-      } else {
-        card.classList.add('failed');
-        statusIndicator.className = 'w-3 h-3 rounded-full bg-red-500';
-        healthText.textContent = 'OUTAGE';
-        healthText.className = 'text-xs text-red-600 font-bold';
-        logTerminal(`[System Event] Catastrophic failure injected in ${clusters[key].name}.`, 'red');
-      }
-
-      // Update Mesh Status Badge
-      if (clusters.delhi.healthy && clusters.mumbai.healthy) {
-        meshBadge.textContent = 'OPERATIONAL';
-        meshBadge.className = 'text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold';
-      } else if (!clusters.delhi.healthy && !clusters.mumbai.healthy) {
-        meshBadge.textContent = 'CRITICAL OUTAGE';
-        meshBadge.className = 'text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded-full font-bold';
-      } else {
-        meshBadge.textContent = 'DEGRADED';
-        meshBadge.className = 'text-[10px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold';
-      }
+      const deployments = clusters[key].deployments || [];
+      let anyActive = false;
+      deployments.forEach(dep => {
+        if (dep.available_replicas > 0) anyActive = true;
+      });
+      
+      const targetReplicas = anyActive ? 0 : 1;
+      
+      logTerminal(`[System Event] Requesting scale to ${targetReplicas} in ${key}...`, 'cyan');
+      
+      fetch('/api/cluster/scale', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context: key, replicas: targetReplicas })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.status === 'success') {
+          logTerminal(`[System Event] Scale command successful in ${key}.`, 'green');
+          clusters[key].healthy = targetReplicas > 0;
+          
+          const meshBadge = document.getElementById('mesh-status-badge');
+          if (meshBadge) {
+            let allHealthy = true;
+            let allFailed = true;
+            let anyCluster = false;
+            
+            for (const k in clusters) {
+              anyCluster = true;
+              if (clusters[k].healthy) {
+                allFailed = false;
+              } else {
+                allHealthy = false;
+              }
+            }
+            
+            if (anyCluster) {
+              if (allHealthy) {
+                meshBadge.textContent = 'OPERATIONAL';
+                meshBadge.className = 'text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold';
+              } else if (allFailed) {
+                meshBadge.textContent = 'CRITICAL OUTAGE';
+                meshBadge.className = 'text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded-full font-bold';
+              } else {
+                meshBadge.textContent = 'DEGRADED';
+                meshBadge.className = 'text-[10px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-bold';
+              }
+            }
+          }
+        } else {
+          logTerminal(`[Error] Failed to scale in ${key}: ${data.detail}`, 'red');
+        }
+      })
+      .catch(err => {
+        console.error("Error scaling deployments:", err);
+        logTerminal(`[Error] Failed to scale in ${key}`, 'red');
+      });
     }
 
     // Data Updates
     function updateCharts() {
+      const labels = [];
+      const data = [];
+      const colors = ['#4285F4', '#9333ea', '#34a853', '#fbbc05'];
+      
+      let totalRequests = 0;
+      for (const k in clusters) {
+        totalRequests += clusters[k].requests || 0;
+      }
+
       if (window.currentTrafficMode === "distribute" && window.trafficDistribution) {
         const to = window.trafficDistribution[0].to;
-        let delhiWeight = 0;
-        let mumbaiWeight = 0;
         for (const [dest, weight] of Object.entries(to)) {
           const region = dest.split('/')[0];
-          if (region === 'asia-south2') delhiWeight = weight;
-          if (region === 'asia-south1') mumbaiWeight = weight;
+          let foundCluster = null;
+          for (const ck in clusters) {
+            if (clusters[ck].region === region) {
+              foundCluster = clusters[ck];
+              break;
+            }
+          }
+          const labelName = foundCluster ? `${foundCluster.name}` : region;
+          labels.push(labelName);
+          data.push(weight);
         }
-        trafficChart.data.datasets[0].data = [delhiWeight, mumbaiWeight];
-        trafficChart.update();
       } else {
-        // Only update if there's actual data to prevent drawing 0/0 charts weirdly
-        if (clusters.delhi.requests > 0 || clusters.mumbai.requests > 0) {
-          trafficChart.data.datasets[0].data = [clusters.delhi.requests, clusters.mumbai.requests];
-          trafficChart.update();
+        if (totalRequests > 0) {
+          for (const k in clusters) {
+            labels.push(`${clusters[k].name}`);
+            data.push(clusters[k].requests || 0);
+          }
         }
+      }
+      
+      if (labels.length > 0 && trafficChart) {
+        trafficChart.data.labels = labels;
+        trafficChart.data.datasets[0].data = data;
+        trafficChart.data.datasets[0].backgroundColor = labels.map((_, i) => colors[i % colors.length]);
+        trafficChart.update();
       }
     }
 
